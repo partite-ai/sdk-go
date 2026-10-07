@@ -4,6 +4,21 @@
 
 The Partite AI Go library provides convenient access to the Partite AI APIs from Go.
 
+## Table of Contents
+
+- [Reference](#reference)
+- [Usage](#usage)
+- [Environments](#environments)
+- [Errors](#errors)
+- [Request Options](#request-options)
+- [Advanced](#advanced)
+  - [Additional Body Properties](#additional-body-properties)
+  - [Response Headers](#response-headers)
+  - [Retries](#retries)
+  - [Timeouts](#timeouts)
+  - [Explicit Null](#explicit-null)
+- [Contributing](#contributing)
+
 ## Reference
 
 A full reference for this library is available [here](./reference.md).
@@ -16,10 +31,11 @@ Instantiate and use the client with the following:
 package example
 
 import (
+    context "context"
+
+    partiteai "github.com/partite-ai/sdk-go"
     client "github.com/partite-ai/sdk-go/client"
     option "github.com/partite-ai/sdk-go/option"
-    partiteai "github.com/partite-ai/sdk-go"
-    context "context"
 )
 
 func do() {
@@ -30,21 +46,14 @@ func do() {
         ),
     )
     request := &partiteai.CreateConversationWithInitialRequestRequest{
-        MeshId: "mesh_id",
-        VersionOrdinal: partiteai.Int(
-            1,
-        ),
-        VersionLabel: partiteai.String(
-            "version_label",
-        ),
+        IntentName: "intent_name",
+        MeshID: "mesh_id",
         InputMessage: map[string]any{
             "key": "value",
         },
     }
     client.Conversations.CreateConversationWithInitialRequest(
         context.TODO(),
-        "intent_name",
-        nil,
         request,
     )
 }
@@ -70,7 +79,7 @@ with the `errors.Is` and `errors.As` APIs, so you can access the error like so:
 response, err := client.Conversations.CreateConversationWithInitialRequest(...)
 if err != nil {
     var apiError *core.APIError
-    if errors.As(err, apiError) {
+    if errors.As(err, &apiError) {
         // Do something with the API error ...
     }
     return err
@@ -92,7 +101,7 @@ specified on the client so that they're applied on every request, or for an indi
 ```go
 // Specify default options applied on every request.
 client := client.NewClient(
-    option.WithToken("<YOUR_API_KEY>"),
+    option.WithBasicAuth("<YOUR_USERNAME>", "<YOUR_PASSWORD>"),
     option.WithHTTPClient(
         &http.Client{
             Timeout: 5 * time.Second,
@@ -103,16 +112,40 @@ client := client.NewClient(
 // Specify options for an individual request.
 response, err := client.Conversations.CreateConversationWithInitialRequest(
     ...,
-    option.WithToken("<YOUR_API_KEY>"),
+    option.WithBasicAuth("<YOUR_USERNAME>", "<YOUR_PASSWORD>"),
 )
 ```
 
+When credentials are not explicitly provided, the client reads them from the
+following environment variables:
+
+- `PARTITE_API_KEY_ID`
+- `PARTITE_API_KEY_SECRET`
+
 ## Advanced
+
+### Additional Body Properties
+
+If you need to send a request body property that isn't part of the generated request type (e.g. an
+undocumented or beta field), use the `option.WithBodyProperties` request option. Keys are sent exactly as
+provided (use the API's wire-format names), and they override any generated field with the same name. If the
+endpoint has no request body, a JSON body is created from the given properties. Body properties are applied to
+JSON and form URL encoded request bodies; they are not applied to multipart file upload or raw byte requests.
+
+```go
+response, err := client.Conversations.CreateConversationWithInitialRequest(
+    ...,
+    option.WithBodyProperties(map[string]interface{}{
+        "custom_field": "custom-value",
+    }),
+)
+```
 
 ### Response Headers
 
 You can access the raw HTTP response data by using the `WithRawResponse` field on the client. This is useful
-when you need to examine the response headers received from the API call.
+when you need to examine the response headers received from the API call. (When the endpoint is paginated,
+the raw HTTP response data will be included automatically in the Page response object.)
 
 ```go
 response, err := client.Conversations.WithRawResponse.CreateConversationWithInitialRequest(...)
@@ -120,6 +153,7 @@ if err != nil {
     return err
 }
 fmt.Printf("Got response headers: %v", response.Header)
+fmt.Printf("Got status code: %d", response.StatusCode)
 ```
 
 ### Retries
@@ -128,11 +162,19 @@ The SDK is instrumented with automatic retries with exponential backoff. A reque
 as the request is deemed retryable and the number of retry attempts has not grown larger than the configured
 retry limit (default: 2).
 
-A request is deemed retryable when any of the following HTTP status codes is returned:
+Which status codes are retried depends on the `retryStatusCodes` generator configuration:
 
+**`legacy`** (current default): retries on
 - [408](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408) (Timeout)
 - [429](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429) (Too Many Requests)
-- [5XX](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500) (Internal Server Errors)
+- [5XX](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses) (All server errors, including 500)
+
+**`recommended`**: retries on
+- [408](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408) (Timeout)
+- [429](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429) (Too Many Requests)
+- [502](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/502) (Bad Gateway)
+- [503](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503) (Service Unavailable)
+- [504](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504) (Gateway Timeout)
 
 If the `Retry-After` header is present in the response, the SDK will prioritize respecting its value exactly
 over the default exponential backoff.

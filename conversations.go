@@ -8,15 +8,16 @@ import (
 	internal "github.com/partite-ai/sdk-go/internal"
 	io "io"
 	big "math/big"
+	time "time"
 )
 
 var (
-	attachAssetsToConversationRequestFieldConversationId = big.NewInt(1 << 0)
+	attachAssetsToConversationRequestFieldConversationID = big.NewInt(1 << 0)
 )
 
 type AttachAssetsToConversationRequest struct {
 	// The ID of an existing conversation
-	ConversationId string      `json:"-" url:"-"`
+	ConversationID string      `json:"-" url:"-"`
 	Attachments    []io.Reader `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
@@ -24,104 +25,131 @@ type AttachAssetsToConversationRequest struct {
 }
 
 func (a *AttachAssetsToConversationRequest) require(field *big.Int) {
-	if a.explicitFields == nil {
-		a.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
 	}
-	a.explicitFields.Or(a.explicitFields, field)
+	next.Or(next, field)
+	a.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (a *AttachAssetsToConversationRequest) SetConversationId(conversationId string) {
-	a.ConversationId = conversationId
-	a.require(attachAssetsToConversationRequestFieldConversationId)
+func (a *AttachAssetsToConversationRequest) SetConversationID(conversationID string) {
+	a.ConversationID = conversationID
+	a.require(attachAssetsToConversationRequestFieldConversationID)
+}
+
+func (a *AttachAssetsToConversationRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler AttachAssetsToConversationRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*a = AttachAssetsToConversationRequest(body)
+	return nil
+}
+
+func (a *AttachAssetsToConversationRequest) MarshalJSON() ([]byte, error) {
+	type embed AttachAssetsToConversationRequest
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*a),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, a.explicitFields)
+	return json.Marshal(explicitMarshaler)
 }
 
 var (
-	cancelRequestRequestFieldConversationId = big.NewInt(1 << 0)
-	cancelRequestRequestFieldRequestId      = big.NewInt(1 << 1)
+	cancelRequestRequestFieldConversationID = big.NewInt(1 << 0)
+	cancelRequestRequestFieldRequestID      = big.NewInt(1 << 1)
 )
 
 type CancelRequestRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
-	RequestId string `json:"-" url:"-"`
+	RequestID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (c *CancelRequestRequest) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CancelRequestRequest) SetConversationId(conversationId string) {
-	c.ConversationId = conversationId
-	c.require(cancelRequestRequestFieldConversationId)
+func (c *CancelRequestRequest) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(cancelRequestRequestFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CancelRequestRequest) SetRequestId(requestId string) {
-	c.RequestId = requestId
-	c.require(cancelRequestRequestFieldRequestId)
+func (c *CancelRequestRequest) SetRequestID(requestID string) {
+	c.RequestID = requestID
+	c.require(cancelRequestRequestFieldRequestID)
 }
 
 var (
-	completeTaskRequestFieldConversationId = big.NewInt(1 << 0)
-	completeTaskRequestFieldRequestId      = big.NewInt(1 << 1)
-	completeTaskRequestFieldTaskId         = big.NewInt(1 << 2)
+	completeTaskRequestFieldConversationID = big.NewInt(1 << 0)
+	completeTaskRequestFieldRequestID      = big.NewInt(1 << 1)
+	completeTaskRequestFieldTaskID         = big.NewInt(1 << 2)
 )
 
 type CompleteTaskRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
-	RequestId string `json:"-" url:"-"`
+	RequestID string `json:"-" url:"-"`
 	// The ID of the task to complete
-	TaskId string      `json:"-" url:"-"`
-	Body   interface{} `json:"-" url:"-"`
+	TaskID string         `json:"-" url:"-"`
+	Body   map[string]any `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (c *CompleteTaskRequest) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CompleteTaskRequest) SetConversationId(conversationId string) {
-	c.ConversationId = conversationId
-	c.require(completeTaskRequestFieldConversationId)
+func (c *CompleteTaskRequest) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(completeTaskRequestFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CompleteTaskRequest) SetRequestId(requestId string) {
-	c.RequestId = requestId
-	c.require(completeTaskRequestFieldRequestId)
+func (c *CompleteTaskRequest) SetRequestID(requestID string) {
+	c.RequestID = requestID
+	c.require(completeTaskRequestFieldRequestID)
 }
 
-// SetTaskId sets the TaskId field and marks it as non-optional;
+// SetTaskID sets the TaskID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CompleteTaskRequest) SetTaskId(taskId string) {
-	c.TaskId = taskId
-	c.require(completeTaskRequestFieldTaskId)
+func (c *CompleteTaskRequest) SetTaskID(taskID string) {
+	c.TaskID = taskID
+	c.require(completeTaskRequestFieldTaskID)
 }
 
 func (c *CompleteTaskRequest) UnmarshalJSON(data []byte) error {
-	var body interface{}
+	var body map[string]any
 	if err := json.Unmarshal(data, &body); err != nil {
 		return err
 	}
@@ -134,35 +162,39 @@ func (c *CompleteTaskRequest) MarshalJSON() ([]byte, error) {
 }
 
 var (
-	createConversationRequestRequestFieldConversationId = big.NewInt(1 << 0)
+	createConversationRequestRequestFieldConversationID = big.NewInt(1 << 0)
 	createConversationRequestRequestFieldIntentName     = big.NewInt(1 << 1)
 )
 
 type CreateConversationRequestRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The name of the Intent defined on the target mesh which will be used for this request
 	IntentName  string      `json:"-" url:"-"`
 	Attachments []io.Reader `json:"-" url:"-"`
 	// The input message to provide to the mesh. The structure of this object must conform to the input message type schema defined on the Intent. Within the input message, any asset references may use the syntax `attachment://<filename>` format to refer to assets attached in the same multipart/form-data body.
-	InputMessage map[string]interface{} `json:"input_message,omitempty" url:"-"`
+	InputMessage map[string]any `json:"input_message" url:"-"`
+	// Request options
+	RequestOptions *RequestCreateOptions `json:"request_options,omitempty" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (c *CreateConversationRequestRequest) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateConversationRequestRequest) SetConversationId(conversationId string) {
-	c.ConversationId = conversationId
-	c.require(createConversationRequestRequestFieldConversationId)
+func (c *CreateConversationRequestRequest) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(createConversationRequestRequestFieldConversationID)
 }
 
 // SetIntentName sets the IntentName field and marks it as non-optional;
@@ -172,9 +204,30 @@ func (c *CreateConversationRequestRequest) SetIntentName(intentName string) {
 	c.require(createConversationRequestRequestFieldIntentName)
 }
 
+func (c *CreateConversationRequestRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateConversationRequestRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*c = CreateConversationRequestRequest(body)
+	return nil
+}
+
+func (c *CreateConversationRequestRequest) MarshalJSON() ([]byte, error) {
+	type embed CreateConversationRequestRequest
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*c),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, c.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
 var (
 	createConversationWithInitialRequestRequestFieldIntentName     = big.NewInt(1 << 0)
-	createConversationWithInitialRequestRequestFieldMeshId         = big.NewInt(1 << 1)
+	createConversationWithInitialRequestRequestFieldMeshID         = big.NewInt(1 << 1)
 	createConversationWithInitialRequestRequestFieldVersionOrdinal = big.NewInt(1 << 2)
 	createConversationWithInitialRequestRequestFieldVersionLabel   = big.NewInt(1 << 3)
 )
@@ -183,24 +236,30 @@ type CreateConversationWithInitialRequestRequest struct {
 	// The name of the Intent defined on the target mesh which will be used to start the conversation
 	IntentName string `json:"-" url:"-"`
 	// The ID of the Mesh for which to create a conversation
-	MeshId string `json:"-" url:"mesh_id"`
+	MeshID string `json:"-" url:"mesh_id"`
 	// The version number of a mesh version for which to create the conversation
 	VersionOrdinal *int `json:"-" url:"version_ordinal,omitempty"`
 	// The version label of a mesh version for which to create the conversation
 	VersionLabel *string     `json:"-" url:"version_label,omitempty"`
 	Attachments  []io.Reader `json:"-" url:"-"`
 	// The input message to provide to the mesh. The structure of this object must conform to the input message type schema defined on the Intent. Within the input message, any asset references may use the syntax `attachment://<filename>` format to refer to assets attached in the same multipart/form-data body.
-	InputMessage map[string]interface{} `json:"input_message,omitempty" url:"-"`
+	InputMessage map[string]any `json:"input_message" url:"-"`
+	// Conversation options
+	ConversationOptions *ConversationCreateOptions `json:"conversation_options,omitempty" url:"-"`
+	// Request options
+	RequestOptions *RequestCreateOptions `json:"request_options,omitempty" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (c *CreateConversationWithInitialRequestRequest) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
 // SetIntentName sets the IntentName field and marks it as non-optional;
@@ -210,11 +269,11 @@ func (c *CreateConversationWithInitialRequestRequest) SetIntentName(intentName s
 	c.require(createConversationWithInitialRequestRequestFieldIntentName)
 }
 
-// SetMeshId sets the MeshId field and marks it as non-optional;
+// SetMeshID sets the MeshID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateConversationWithInitialRequestRequest) SetMeshId(meshId string) {
-	c.MeshId = meshId
-	c.require(createConversationWithInitialRequestRequestFieldMeshId)
+func (c *CreateConversationWithInitialRequestRequest) SetMeshID(meshID string) {
+	c.MeshID = meshID
+	c.require(createConversationWithInitialRequestRequestFieldMeshID)
 }
 
 // SetVersionOrdinal sets the VersionOrdinal field and marks it as non-optional;
@@ -231,36 +290,71 @@ func (c *CreateConversationWithInitialRequestRequest) SetVersionLabel(versionLab
 	c.require(createConversationWithInitialRequestRequestFieldVersionLabel)
 }
 
+func (c *CreateConversationWithInitialRequestRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateConversationWithInitialRequestRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*c = CreateConversationWithInitialRequestRequest(body)
+	return nil
+}
+
+func (c *CreateConversationWithInitialRequestRequest) MarshalJSON() ([]byte, error) {
+	type embed CreateConversationWithInitialRequestRequest
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*c),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, c.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
 var (
-	createEmptyConversationRequestFieldMeshId         = big.NewInt(1 << 0)
-	createEmptyConversationRequestFieldVersionOrdinal = big.NewInt(1 << 1)
-	createEmptyConversationRequestFieldVersionLabel   = big.NewInt(1 << 2)
+	createEmptyConversationRequestFieldMeshID              = big.NewInt(1 << 0)
+	createEmptyConversationRequestFieldVersionOrdinal      = big.NewInt(1 << 1)
+	createEmptyConversationRequestFieldVersionLabel        = big.NewInt(1 << 2)
+	createEmptyConversationRequestFieldTags                = big.NewInt(1 << 3)
+	createEmptyConversationRequestFieldExternalID          = big.NewInt(1 << 4)
+	createEmptyConversationRequestFieldNotificationChannel = big.NewInt(1 << 5)
+	createEmptyConversationRequestFieldTracingEnabled      = big.NewInt(1 << 6)
 )
 
 type CreateEmptyConversationRequest struct {
 	// The ID of the Mesh for which to create a conversation
-	MeshId string `json:"-" url:"mesh_id"`
+	MeshID string `json:"-" url:"mesh_id"`
 	// The version number of a mesh version for which to create the conversation
 	VersionOrdinal *int `json:"-" url:"version_ordinal,omitempty"`
 	// The version label of a mesh version for which to create the conversation
 	VersionLabel *string `json:"-" url:"version_label,omitempty"`
+	// Tags to apply to the conversation.
+	Tags []*Tag `json:"tags,omitempty" url:"-"`
+	// Optional client-chosen external ID for the new conversation: 1 to 255 bytes. Immutable and unique (per organization). Use `GET /conversations/lookup/external-id/{external_id}` to find the conversation again.
+	ExternalID *string `json:"external_id,omitempty" url:"-"`
+	// Optional notification channel for the new conversation: 1 to 255 bytes. Every request output the conversation writes is also appended to this channel, readable via `GET /notification-channels/{notification_channel_id}/events`. The channel is created implicitly on first use and cannot be changed later.
+	NotificationChannel *string `json:"notification_channel,omitempty" url:"-"`
+	// Optional. `false` turns off tracing for the new conversation, so the mesh records no trace for any of its requests. Defaults to `true`. Cannot be changed later.
+	TracingEnabled *bool `json:"tracing_enabled,omitempty" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (c *CreateEmptyConversationRequest) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetMeshId sets the MeshId field and marks it as non-optional;
+// SetMeshID sets the MeshID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateEmptyConversationRequest) SetMeshId(meshId string) {
-	c.MeshId = meshId
-	c.require(createEmptyConversationRequestFieldMeshId)
+func (c *CreateEmptyConversationRequest) SetMeshID(meshID string) {
+	c.MeshID = meshID
+	c.require(createEmptyConversationRequestFieldMeshID)
 }
 
 // SetVersionOrdinal sets the VersionOrdinal field and marks it as non-optional;
@@ -277,67 +371,176 @@ func (c *CreateEmptyConversationRequest) SetVersionLabel(versionLabel *string) {
 	c.require(createEmptyConversationRequestFieldVersionLabel)
 }
 
+// SetTags sets the Tags field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *CreateEmptyConversationRequest) SetTags(tags []*Tag) {
+	c.Tags = tags
+	c.require(createEmptyConversationRequestFieldTags)
+}
+
+// SetExternalID sets the ExternalID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *CreateEmptyConversationRequest) SetExternalID(externalID *string) {
+	c.ExternalID = externalID
+	c.require(createEmptyConversationRequestFieldExternalID)
+}
+
+// SetNotificationChannel sets the NotificationChannel field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *CreateEmptyConversationRequest) SetNotificationChannel(notificationChannel *string) {
+	c.NotificationChannel = notificationChannel
+	c.require(createEmptyConversationRequestFieldNotificationChannel)
+}
+
+// SetTracingEnabled sets the TracingEnabled field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *CreateEmptyConversationRequest) SetTracingEnabled(tracingEnabled *bool) {
+	c.TracingEnabled = tracingEnabled
+	c.require(createEmptyConversationRequestFieldTracingEnabled)
+}
+
+func (c *CreateEmptyConversationRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateEmptyConversationRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*c = CreateEmptyConversationRequest(body)
+	return nil
+}
+
+func (c *CreateEmptyConversationRequest) MarshalJSON() ([]byte, error) {
+	type embed CreateEmptyConversationRequest
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*c),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, c.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
 var (
-	getConversationRequestsRequestFieldConversationId = big.NewInt(1 << 0)
+	getConversationRequestFieldConversationID = big.NewInt(1 << 0)
+)
+
+type GetConversationRequest struct {
+	// The ID of an existing conversation
+	ConversationID string `json:"-" url:"-"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+}
+
+func (g *GetConversationRequest) require(field *big.Int) {
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
+	}
+	next.Or(next, field)
+	g.explicitFields = next
+}
+
+// SetConversationID sets the ConversationID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetConversationRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getConversationRequestFieldConversationID)
+}
+
+var (
+	getConversationByExternalIDRequestFieldExternalID = big.NewInt(1 << 0)
+)
+
+type GetConversationByExternalIDRequest struct {
+	// The external ID supplied when the conversation was created.
+	ExternalID string `json:"-" url:"-"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+}
+
+func (g *GetConversationByExternalIDRequest) require(field *big.Int) {
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
+	}
+	next.Or(next, field)
+	g.explicitFields = next
+}
+
+// SetExternalID sets the ExternalID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetConversationByExternalIDRequest) SetExternalID(externalID string) {
+	g.ExternalID = externalID
+	g.require(getConversationByExternalIDRequestFieldExternalID)
+}
+
+var (
+	getConversationRequestsRequestFieldConversationID = big.NewInt(1 << 0)
 )
 
 type GetConversationRequestsRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (g *GetConversationRequestsRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetConversationRequestsRequest) SetConversationId(conversationId string) {
-	g.ConversationId = conversationId
-	g.require(getConversationRequestsRequestFieldConversationId)
+func (g *GetConversationRequestsRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getConversationRequestsRequestFieldConversationID)
 }
 
 var (
-	getIntentsForConversationRequestFieldConversationId = big.NewInt(1 << 0)
+	getIntentsForConversationRequestFieldConversationID = big.NewInt(1 << 0)
 )
 
 type GetIntentsForConversationRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (g *GetIntentsForConversationRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetIntentsForConversationRequest) SetConversationId(conversationId string) {
-	g.ConversationId = conversationId
-	g.require(getIntentsForConversationRequestFieldConversationId)
+func (g *GetIntentsForConversationRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getIntentsForConversationRequestFieldConversationID)
 }
 
 var (
-	getIntentsForNewConversationRequestFieldMeshId         = big.NewInt(1 << 0)
+	getIntentsForNewConversationRequestFieldMeshID         = big.NewInt(1 << 0)
 	getIntentsForNewConversationRequestFieldVersionOrdinal = big.NewInt(1 << 1)
 	getIntentsForNewConversationRequestFieldVersionLabel   = big.NewInt(1 << 2)
 )
 
 type GetIntentsForNewConversationRequest struct {
 	// The ID of the Mesh for which to get intents
-	MeshId string `json:"-" url:"mesh_id"`
+	MeshID string `json:"-" url:"mesh_id"`
 	// The version number of a mesh version for which to get intents
 	VersionOrdinal *int `json:"-" url:"version_ordinal,omitempty"`
 	// The version label of a mesh version for which to get intents
@@ -348,17 +551,19 @@ type GetIntentsForNewConversationRequest struct {
 }
 
 func (g *GetIntentsForNewConversationRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetMeshId sets the MeshId field and marks it as non-optional;
+// SetMeshID sets the MeshID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetIntentsForNewConversationRequest) SetMeshId(meshId string) {
-	g.MeshId = meshId
-	g.require(getIntentsForNewConversationRequestFieldMeshId)
+func (g *GetIntentsForNewConversationRequest) SetMeshID(meshID string) {
+	g.MeshID = meshID
+	g.require(getIntentsForNewConversationRequestFieldMeshID)
 }
 
 // SetVersionOrdinal sets the VersionOrdinal field and marks it as non-optional;
@@ -376,132 +581,138 @@ func (g *GetIntentsForNewConversationRequest) SetVersionLabel(versionLabel *stri
 }
 
 var (
-	getRequestEventsRequestFieldLastEventId    = big.NewInt(1 << 0)
-	getRequestEventsRequestFieldConversationId = big.NewInt(1 << 1)
-	getRequestEventsRequestFieldRequestId      = big.NewInt(1 << 2)
+	getRequestEventsRequestFieldLastEventID    = big.NewInt(1 << 0)
+	getRequestEventsRequestFieldConversationID = big.NewInt(1 << 1)
+	getRequestEventsRequestFieldRequestID      = big.NewInt(1 << 2)
 )
 
 type GetRequestEventsRequest struct {
 	// The ID of the last event received. If provided, the stream will start from the next event after this ID.
-	LastEventId *string `json:"-" url:"-"`
+	LastEventID *string `json:"-" url:"-"`
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
-	RequestId string `json:"-" url:"-"`
+	RequestID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (g *GetRequestEventsRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetLastEventId sets the LastEventId field and marks it as non-optional;
+// SetLastEventID sets the LastEventID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestEventsRequest) SetLastEventId(lastEventId *string) {
-	g.LastEventId = lastEventId
-	g.require(getRequestEventsRequestFieldLastEventId)
+func (g *GetRequestEventsRequest) SetLastEventID(lastEventID *string) {
+	g.LastEventID = lastEventID
+	g.require(getRequestEventsRequestFieldLastEventID)
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestEventsRequest) SetConversationId(conversationId string) {
-	g.ConversationId = conversationId
-	g.require(getRequestEventsRequestFieldConversationId)
+func (g *GetRequestEventsRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getRequestEventsRequestFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestEventsRequest) SetRequestId(requestId string) {
-	g.RequestId = requestId
-	g.require(getRequestEventsRequestFieldRequestId)
+func (g *GetRequestEventsRequest) SetRequestID(requestID string) {
+	g.RequestID = requestID
+	g.require(getRequestEventsRequestFieldRequestID)
 }
 
 var (
-	getRequestResponseRequestFieldConversationId = big.NewInt(1 << 0)
-	getRequestResponseRequestFieldRequestId      = big.NewInt(1 << 1)
+	getRequestResponseRequestFieldConversationID = big.NewInt(1 << 0)
+	getRequestResponseRequestFieldRequestID      = big.NewInt(1 << 1)
 )
 
 type GetRequestResponseRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
-	RequestId string `json:"-" url:"-"`
+	RequestID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (g *GetRequestResponseRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestResponseRequest) SetConversationId(conversationId string) {
-	g.ConversationId = conversationId
-	g.require(getRequestResponseRequestFieldConversationId)
+func (g *GetRequestResponseRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getRequestResponseRequestFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestResponseRequest) SetRequestId(requestId string) {
-	g.RequestId = requestId
-	g.require(getRequestResponseRequestFieldRequestId)
+func (g *GetRequestResponseRequest) SetRequestID(requestID string) {
+	g.RequestID = requestID
+	g.require(getRequestResponseRequestFieldRequestID)
 }
 
 var (
-	getRequestTaskRequestFieldConversationId = big.NewInt(1 << 0)
-	getRequestTaskRequestFieldRequestId      = big.NewInt(1 << 1)
+	getRequestTaskRequestFieldConversationID = big.NewInt(1 << 0)
+	getRequestTaskRequestFieldRequestID      = big.NewInt(1 << 1)
 )
 
 type GetRequestTaskRequest struct {
 	// The ID of an existing conversation
-	ConversationId string `json:"-" url:"-"`
+	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
-	RequestId string `json:"-" url:"-"`
+	RequestID string `json:"-" url:"-"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
 }
 
 func (g *GetRequestTaskRequest) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestTaskRequest) SetConversationId(conversationId string) {
-	g.ConversationId = conversationId
-	g.require(getRequestTaskRequestFieldConversationId)
+func (g *GetRequestTaskRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getRequestTaskRequestFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetRequestTaskRequest) SetRequestId(requestId string) {
-	g.RequestId = requestId
-	g.require(getRequestTaskRequestFieldRequestId)
+func (g *GetRequestTaskRequest) SetRequestID(requestID string) {
+	g.RequestID = requestID
+	g.require(getRequestTaskRequestFieldRequestID)
 }
 
-// Information about an uploaded attachment
 var (
-	attachmentInfoFieldReferenceUrl = big.NewInt(1 << 0)
+	attachmentInfoFieldReferenceURL = big.NewInt(1 << 0)
 	attachmentInfoFieldFilename     = big.NewInt(1 << 1)
 )
 
+// Information about an uploaded attachment
 type AttachmentInfo struct {
 	// A URL that can be used to access the uploaded asset in references.
-	ReferenceUrl string `json:"reference_url" url:"reference_url"`
+	ReferenceURL string `json:"reference_url" url:"reference_url"`
 	// The original filename of the uploaded asset.
 	Filename string `json:"filename" url:"filename"`
 
@@ -512,11 +723,11 @@ type AttachmentInfo struct {
 	rawJSON         json.RawMessage
 }
 
-func (a *AttachmentInfo) GetReferenceUrl() string {
+func (a *AttachmentInfo) GetReferenceURL() string {
 	if a == nil {
 		return ""
 	}
-	return a.ReferenceUrl
+	return a.ReferenceURL
 }
 
 func (a *AttachmentInfo) GetFilename() string {
@@ -527,21 +738,26 @@ func (a *AttachmentInfo) GetFilename() string {
 }
 
 func (a *AttachmentInfo) GetExtraProperties() map[string]interface{} {
+	if a == nil {
+		return nil
+	}
 	return a.extraProperties
 }
 
 func (a *AttachmentInfo) require(field *big.Int) {
-	if a.explicitFields == nil {
-		a.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
 	}
-	a.explicitFields.Or(a.explicitFields, field)
+	next.Or(next, field)
+	a.explicitFields = next
 }
 
-// SetReferenceUrl sets the ReferenceUrl field and marks it as non-optional;
+// SetReferenceURL sets the ReferenceURL field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (a *AttachmentInfo) SetReferenceUrl(referenceUrl string) {
-	a.ReferenceUrl = referenceUrl
-	a.require(attachmentInfoFieldReferenceUrl)
+func (a *AttachmentInfo) SetReferenceURL(referenceURL string) {
+	a.ReferenceURL = referenceURL
+	a.require(attachmentInfoFieldReferenceURL)
 }
 
 // SetFilename sets the Filename field and marks it as non-optional;
@@ -579,6 +795,9 @@ func (a *AttachmentInfo) MarshalJSON() ([]byte, error) {
 }
 
 func (a *AttachmentInfo) String() string {
+	if a == nil {
+		return "<nil>"
+	}
 	if len(a.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
 			return value
@@ -590,17 +809,27 @@ func (a *AttachmentInfo) String() string {
 	return fmt.Sprintf("%#v", a)
 }
 
-// Details about a cancellation event
 var (
-	cancelEventDetailsFieldId   = big.NewInt(1 << 0)
-	cancelEventDetailsFieldData = big.NewInt(1 << 1)
+	conversationFieldConversationID = big.NewInt(1 << 0)
+	conversationFieldExternalID     = big.NewInt(1 << 1)
+	conversationFieldMeshID         = big.NewInt(1 << 2)
+	conversationFieldMeshVersionID  = big.NewInt(1 << 3)
+	conversationFieldTags           = big.NewInt(1 << 4)
+	conversationFieldCreatedAt      = big.NewInt(1 << 5)
+	conversationFieldUpdatedAt      = big.NewInt(1 << 6)
 )
 
-type CancelEventDetails struct {
-	// The ID of the cancellation event
-	Id string `json:"id" url:"id"`
-	// A description of the cancellation.
-	Data string `json:"data" url:"data"`
+// A conversation and its client-facing attributes.
+type Conversation struct {
+	ConversationID string `json:"conversation_id" url:"conversation_id"`
+	// The client-supplied external ID, if one was set at creation.
+	ExternalID    *string `json:"external_id,omitempty" url:"external_id,omitempty"`
+	MeshID        string  `json:"mesh_id" url:"mesh_id"`
+	MeshVersionID string  `json:"mesh_version_id" url:"mesh_version_id"`
+	// The tags supplied when the conversation was created. Empty when none were.
+	Tags      []*Tag    `json:"tags" url:"tags"`
+	CreatedAt time.Time `json:"created_at" url:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" url:"updated_at"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -609,52 +838,135 @@ type CancelEventDetails struct {
 	rawJSON         json.RawMessage
 }
 
-func (c *CancelEventDetails) GetId() string {
+func (c *Conversation) GetConversationID() string {
 	if c == nil {
 		return ""
 	}
-	return c.Id
+	return c.ConversationID
 }
 
-func (c *CancelEventDetails) GetData() string {
+func (c *Conversation) GetExternalID() *string {
+	if c == nil {
+		return nil
+	}
+	return c.ExternalID
+}
+
+func (c *Conversation) GetMeshID() string {
 	if c == nil {
 		return ""
 	}
-	return c.Data
+	return c.MeshID
 }
 
-func (c *CancelEventDetails) GetExtraProperties() map[string]interface{} {
+func (c *Conversation) GetMeshVersionID() string {
+	if c == nil {
+		return ""
+	}
+	return c.MeshVersionID
+}
+
+func (c *Conversation) GetTags() []*Tag {
+	if c == nil {
+		return nil
+	}
+	return c.Tags
+}
+
+func (c *Conversation) GetCreatedAt() time.Time {
+	if c == nil {
+		return time.Time{}
+	}
+	return c.CreatedAt
+}
+
+func (c *Conversation) GetUpdatedAt() time.Time {
+	if c == nil {
+		return time.Time{}
+	}
+	return c.UpdatedAt
+}
+
+func (c *Conversation) GetExtraProperties() map[string]interface{} {
+	if c == nil {
+		return nil
+	}
 	return c.extraProperties
 }
 
-func (c *CancelEventDetails) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+func (c *Conversation) require(field *big.Int) {
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetId sets the Id field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CancelEventDetails) SetId(id string) {
-	c.Id = id
-	c.require(cancelEventDetailsFieldId)
+func (c *Conversation) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(conversationFieldConversationID)
 }
 
-// SetData sets the Data field and marks it as non-optional;
+// SetExternalID sets the ExternalID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CancelEventDetails) SetData(data string) {
-	c.Data = data
-	c.require(cancelEventDetailsFieldData)
+func (c *Conversation) SetExternalID(externalID *string) {
+	c.ExternalID = externalID
+	c.require(conversationFieldExternalID)
 }
 
-func (c *CancelEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler CancelEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
+// SetMeshID sets the MeshID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *Conversation) SetMeshID(meshID string) {
+	c.MeshID = meshID
+	c.require(conversationFieldMeshID)
+}
+
+// SetMeshVersionID sets the MeshVersionID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *Conversation) SetMeshVersionID(meshVersionID string) {
+	c.MeshVersionID = meshVersionID
+	c.require(conversationFieldMeshVersionID)
+}
+
+// SetTags sets the Tags field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *Conversation) SetTags(tags []*Tag) {
+	c.Tags = tags
+	c.require(conversationFieldTags)
+}
+
+// SetCreatedAt sets the CreatedAt field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *Conversation) SetCreatedAt(createdAt time.Time) {
+	c.CreatedAt = createdAt
+	c.require(conversationFieldCreatedAt)
+}
+
+// SetUpdatedAt sets the UpdatedAt field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *Conversation) SetUpdatedAt(updatedAt time.Time) {
+	c.UpdatedAt = updatedAt
+	c.require(conversationFieldUpdatedAt)
+}
+
+func (c *Conversation) UnmarshalJSON(data []byte) error {
+	type embed Conversation
+	var unmarshaler = struct {
+		embed
+		CreatedAt *internal.DateTime `json:"created_at"`
+		UpdatedAt *internal.DateTime `json:"updated_at"`
+	}{
+		embed: embed(*c),
+	}
+	if err := json.Unmarshal(data, &unmarshaler); err != nil {
 		return err
 	}
-	*c = CancelEventDetails(value)
+	*c = Conversation(unmarshaler.embed)
+	c.CreatedAt = unmarshaler.CreatedAt.Time()
+	c.UpdatedAt = unmarshaler.UpdatedAt.Time()
 	extraProperties, err := internal.ExtractExtraProperties(data, *c)
 	if err != nil {
 		return err
@@ -664,18 +976,25 @@ func (c *CancelEventDetails) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *CancelEventDetails) MarshalJSON() ([]byte, error) {
-	type embed CancelEventDetails
+func (c *Conversation) MarshalJSON() ([]byte, error) {
+	type embed Conversation
 	var marshaler = struct {
 		embed
+		CreatedAt *internal.DateTime `json:"created_at"`
+		UpdatedAt *internal.DateTime `json:"updated_at"`
 	}{
-		embed: embed(*c),
+		embed:     embed(*c),
+		CreatedAt: internal.NewDateTime(c.CreatedAt),
+		UpdatedAt: internal.NewDateTime(c.UpdatedAt),
 	}
 	explicitMarshaler := internal.HandleExplicitFields(marshaler, c.explicitFields)
 	return json.Marshal(explicitMarshaler)
 }
 
-func (c *CancelEventDetails) String() string {
+func (c *Conversation) String() string {
+	if c == nil {
+		return "<nil>"
+	}
 	if len(c.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
 			return value
@@ -687,14 +1006,153 @@ func (c *CancelEventDetails) String() string {
 	return fmt.Sprintf("%#v", c)
 }
 
-// Response returned when a conversation is created without an initial request.
 var (
-	createConversationResponseFieldConversationId = big.NewInt(1 << 0)
+	conversationCreateOptionsFieldTags                = big.NewInt(1 << 0)
+	conversationCreateOptionsFieldExternalID          = big.NewInt(1 << 1)
+	conversationCreateOptionsFieldNotificationChannel = big.NewInt(1 << 2)
+	conversationCreateOptionsFieldTracingEnabled      = big.NewInt(1 << 3)
+)
+
+// Settings for conversation.
+type ConversationCreateOptions struct {
+	// Tags to apply to the conversation.
+	Tags []*Tag `json:"tags,omitempty" url:"tags,omitempty"`
+	// Optional client-chosen external ID for the new conversation: 1 to 255 bytes. Immutable and unique (per organization). Use `GET /conversations/lookup/external-id/{external_id}` to find the conversation again.
+	ExternalID *string `json:"external_id,omitempty" url:"external_id,omitempty"`
+	// Optional notification channel for the new conversation: 1 to 255 bytes. Every request output the conversation writes is also appended to this channel, readable via `GET /notification-channels/{notification_channel_id}/events`. The channel is created implicitly on first use and cannot be changed later.
+	NotificationChannel *string `json:"notification_channel,omitempty" url:"notification_channel,omitempty"`
+	// Optional. `false` turns off tracing for the new conversation, so the mesh records no trace for any of its requests. Defaults to `true`. Cannot be changed later.
+	TracingEnabled *bool `json:"tracing_enabled,omitempty" url:"tracing_enabled,omitempty"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (c *ConversationCreateOptions) GetTags() []*Tag {
+	if c == nil {
+		return nil
+	}
+	return c.Tags
+}
+
+func (c *ConversationCreateOptions) GetExternalID() *string {
+	if c == nil {
+		return nil
+	}
+	return c.ExternalID
+}
+
+func (c *ConversationCreateOptions) GetNotificationChannel() *string {
+	if c == nil {
+		return nil
+	}
+	return c.NotificationChannel
+}
+
+func (c *ConversationCreateOptions) GetTracingEnabled() *bool {
+	if c == nil {
+		return nil
+	}
+	return c.TracingEnabled
+}
+
+func (c *ConversationCreateOptions) GetExtraProperties() map[string]interface{} {
+	if c == nil {
+		return nil
+	}
+	return c.extraProperties
+}
+
+func (c *ConversationCreateOptions) require(field *big.Int) {
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
+	}
+	next.Or(next, field)
+	c.explicitFields = next
+}
+
+// SetTags sets the Tags field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *ConversationCreateOptions) SetTags(tags []*Tag) {
+	c.Tags = tags
+	c.require(conversationCreateOptionsFieldTags)
+}
+
+// SetExternalID sets the ExternalID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *ConversationCreateOptions) SetExternalID(externalID *string) {
+	c.ExternalID = externalID
+	c.require(conversationCreateOptionsFieldExternalID)
+}
+
+// SetNotificationChannel sets the NotificationChannel field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *ConversationCreateOptions) SetNotificationChannel(notificationChannel *string) {
+	c.NotificationChannel = notificationChannel
+	c.require(conversationCreateOptionsFieldNotificationChannel)
+}
+
+// SetTracingEnabled sets the TracingEnabled field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (c *ConversationCreateOptions) SetTracingEnabled(tracingEnabled *bool) {
+	c.TracingEnabled = tracingEnabled
+	c.require(conversationCreateOptionsFieldTracingEnabled)
+}
+
+func (c *ConversationCreateOptions) UnmarshalJSON(data []byte) error {
+	type unmarshaler ConversationCreateOptions
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = ConversationCreateOptions(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *c)
+	if err != nil {
+		return err
+	}
+	c.extraProperties = extraProperties
+	c.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *ConversationCreateOptions) MarshalJSON() ([]byte, error) {
+	type embed ConversationCreateOptions
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*c),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, c.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (c *ConversationCreateOptions) String() string {
+	if c == nil {
+		return "<nil>"
+	}
+	if len(c.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
+var (
+	createConversationResponseFieldConversationID = big.NewInt(1 << 0)
 	createConversationResponseFieldIntents        = big.NewInt(1 << 1)
 )
 
+// Response returned when a conversation is created without an initial request.
 type CreateConversationResponse struct {
-	ConversationId string      `json:"conversation_id" url:"conversation_id"`
+	ConversationID string      `json:"conversation_id" url:"conversation_id"`
 	Intents        IntentsList `json:"intents" url:"intents"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
@@ -704,11 +1162,11 @@ type CreateConversationResponse struct {
 	rawJSON         json.RawMessage
 }
 
-func (c *CreateConversationResponse) GetConversationId() string {
+func (c *CreateConversationResponse) GetConversationID() string {
 	if c == nil {
 		return ""
 	}
-	return c.ConversationId
+	return c.ConversationID
 }
 
 func (c *CreateConversationResponse) GetIntents() IntentsList {
@@ -719,21 +1177,26 @@ func (c *CreateConversationResponse) GetIntents() IntentsList {
 }
 
 func (c *CreateConversationResponse) GetExtraProperties() map[string]interface{} {
+	if c == nil {
+		return nil
+	}
 	return c.extraProperties
 }
 
 func (c *CreateConversationResponse) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateConversationResponse) SetConversationId(conversationId string) {
-	c.ConversationId = conversationId
-	c.require(createConversationResponseFieldConversationId)
+func (c *CreateConversationResponse) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(createConversationResponseFieldConversationID)
 }
 
 // SetIntents sets the Intents field and marks it as non-optional;
@@ -771,6 +1234,9 @@ func (c *CreateConversationResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (c *CreateConversationResponse) String() string {
+	if c == nil {
+		return "<nil>"
+	}
 	if len(c.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
 			return value
@@ -783,13 +1249,13 @@ func (c *CreateConversationResponse) String() string {
 }
 
 var (
-	createRequestResponseFieldConversationId = big.NewInt(1 << 0)
-	createRequestResponseFieldRequestId      = big.NewInt(1 << 1)
+	createRequestResponseFieldConversationID = big.NewInt(1 << 0)
+	createRequestResponseFieldRequestID      = big.NewInt(1 << 1)
 )
 
 type CreateRequestResponse struct {
-	ConversationId string `json:"conversation_id" url:"conversation_id"`
-	RequestId      string `json:"request_id" url:"request_id"`
+	ConversationID string `json:"conversation_id" url:"conversation_id"`
+	RequestID      string `json:"request_id" url:"request_id"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -798,43 +1264,48 @@ type CreateRequestResponse struct {
 	rawJSON         json.RawMessage
 }
 
-func (c *CreateRequestResponse) GetConversationId() string {
+func (c *CreateRequestResponse) GetConversationID() string {
 	if c == nil {
 		return ""
 	}
-	return c.ConversationId
+	return c.ConversationID
 }
 
-func (c *CreateRequestResponse) GetRequestId() string {
+func (c *CreateRequestResponse) GetRequestID() string {
 	if c == nil {
 		return ""
 	}
-	return c.RequestId
+	return c.RequestID
 }
 
 func (c *CreateRequestResponse) GetExtraProperties() map[string]interface{} {
+	if c == nil {
+		return nil
+	}
 	return c.extraProperties
 }
 
 func (c *CreateRequestResponse) require(field *big.Int) {
-	if c.explicitFields == nil {
-		c.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if c.explicitFields != nil {
+		next.Set(c.explicitFields)
 	}
-	c.explicitFields.Or(c.explicitFields, field)
+	next.Or(next, field)
+	c.explicitFields = next
 }
 
-// SetConversationId sets the ConversationId field and marks it as non-optional;
+// SetConversationID sets the ConversationID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateRequestResponse) SetConversationId(conversationId string) {
-	c.ConversationId = conversationId
-	c.require(createRequestResponseFieldConversationId)
+func (c *CreateRequestResponse) SetConversationID(conversationID string) {
+	c.ConversationID = conversationID
+	c.require(createRequestResponseFieldConversationID)
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (c *CreateRequestResponse) SetRequestId(requestId string) {
-	c.RequestId = requestId
-	c.require(createRequestResponseFieldRequestId)
+func (c *CreateRequestResponse) SetRequestID(requestID string) {
+	c.RequestID = requestID
+	c.require(createRequestResponseFieldRequestID)
 }
 
 func (c *CreateRequestResponse) UnmarshalJSON(data []byte) error {
@@ -865,6 +1336,9 @@ func (c *CreateRequestResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (c *CreateRequestResponse) String() string {
+	if c == nil {
+		return "<nil>"
+	}
 	if len(c.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
 			return value
@@ -876,112 +1350,14 @@ func (c *CreateRequestResponse) String() string {
 	return fmt.Sprintf("%#v", c)
 }
 
-// Details about an error that occurred during request processing
 var (
-	errorEventDetailsFieldId   = big.NewInt(1 << 0)
-	errorEventDetailsFieldData = big.NewInt(1 << 1)
-)
-
-type ErrorEventDetails struct {
-	// The ID of the error event
-	Id string `json:"id" url:"id"`
-	// A description of the error that occurred.
-	Data string `json:"data" url:"data"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (e *ErrorEventDetails) GetId() string {
-	if e == nil {
-		return ""
-	}
-	return e.Id
-}
-
-func (e *ErrorEventDetails) GetData() string {
-	if e == nil {
-		return ""
-	}
-	return e.Data
-}
-
-func (e *ErrorEventDetails) GetExtraProperties() map[string]interface{} {
-	return e.extraProperties
-}
-
-func (e *ErrorEventDetails) require(field *big.Int) {
-	if e.explicitFields == nil {
-		e.explicitFields = big.NewInt(0)
-	}
-	e.explicitFields.Or(e.explicitFields, field)
-}
-
-// SetId sets the Id field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (e *ErrorEventDetails) SetId(id string) {
-	e.Id = id
-	e.require(errorEventDetailsFieldId)
-}
-
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (e *ErrorEventDetails) SetData(data string) {
-	e.Data = data
-	e.require(errorEventDetailsFieldData)
-}
-
-func (e *ErrorEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler ErrorEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*e = ErrorEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *e)
-	if err != nil {
-		return err
-	}
-	e.extraProperties = extraProperties
-	e.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (e *ErrorEventDetails) MarshalJSON() ([]byte, error) {
-	type embed ErrorEventDetails
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*e),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, e.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (e *ErrorEventDetails) String() string {
-	if len(e.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(e.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(e); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", e)
-}
-
-var (
-	getTaskResponseFieldTaskId = big.NewInt(1 << 0)
+	getTaskResponseFieldTaskID = big.NewInt(1 << 0)
 	getTaskResponseFieldData   = big.NewInt(1 << 1)
 )
 
 type GetTaskResponse struct {
-	TaskId string `json:"task_id" url:"task_id"`
-	// Details about the task the user must perform to continue processing the request
-	Data *GetTaskResponseData `json:"data" url:"data"`
+	TaskID string    `json:"task_id" url:"task_id"`
+	Data   *TaskData `json:"data" url:"data"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -990,14 +1366,14 @@ type GetTaskResponse struct {
 	rawJSON         json.RawMessage
 }
 
-func (g *GetTaskResponse) GetTaskId() string {
+func (g *GetTaskResponse) GetTaskID() string {
 	if g == nil {
 		return ""
 	}
-	return g.TaskId
+	return g.TaskID
 }
 
-func (g *GetTaskResponse) GetData() *GetTaskResponseData {
+func (g *GetTaskResponse) GetData() *TaskData {
 	if g == nil {
 		return nil
 	}
@@ -1005,26 +1381,31 @@ func (g *GetTaskResponse) GetData() *GetTaskResponseData {
 }
 
 func (g *GetTaskResponse) GetExtraProperties() map[string]interface{} {
+	if g == nil {
+		return nil
+	}
 	return g.extraProperties
 }
 
 func (g *GetTaskResponse) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetTaskId sets the TaskId field and marks it as non-optional;
+// SetTaskID sets the TaskID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetTaskResponse) SetTaskId(taskId string) {
-	g.TaskId = taskId
-	g.require(getTaskResponseFieldTaskId)
+func (g *GetTaskResponse) SetTaskID(taskID string) {
+	g.TaskID = taskID
+	g.require(getTaskResponseFieldTaskID)
 }
 
 // SetData sets the Data field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetTaskResponse) SetData(data *GetTaskResponseData) {
+func (g *GetTaskResponse) SetData(data *TaskData) {
 	g.Data = data
 	g.require(getTaskResponseFieldData)
 }
@@ -1057,103 +1438,9 @@ func (g *GetTaskResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GetTaskResponse) String() string {
-	if len(g.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(g.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(g); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", g)
-}
-
-// Details about the task the user must perform to continue processing the request
-var (
-	getTaskResponseDataFieldInput    = big.NewInt(1 << 0)
-	getTaskResponseDataFieldTaskType = big.NewInt(1 << 1)
-)
-
-type GetTaskResponseData struct {
-	// Any information necessary to perform the task. Varies according to `task_type`. For the `ask_question` task type (the only currently supported type), will consist of an object with a single `question` property containing the question the model desires the answer for. In the future, custom task definitions will be allowed, and the object structure will conform to the schema defined in the task type.
-	Input map[string]interface{} `json:"input" url:"input"`
-	// Currently will be "ask_question", additional task types will be defined in the future.
-	TaskType string `json:"task_type" url:"task_type"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (g *GetTaskResponseData) GetInput() map[string]interface{} {
 	if g == nil {
-		return nil
+		return "<nil>"
 	}
-	return g.Input
-}
-
-func (g *GetTaskResponseData) GetTaskType() string {
-	if g == nil {
-		return ""
-	}
-	return g.TaskType
-}
-
-func (g *GetTaskResponseData) GetExtraProperties() map[string]interface{} {
-	return g.extraProperties
-}
-
-func (g *GetTaskResponseData) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
-	}
-	g.explicitFields.Or(g.explicitFields, field)
-}
-
-// SetInput sets the Input field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetTaskResponseData) SetInput(input map[string]interface{}) {
-	g.Input = input
-	g.require(getTaskResponseDataFieldInput)
-}
-
-// SetTaskType sets the TaskType field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetTaskResponseData) SetTaskType(taskType string) {
-	g.TaskType = taskType
-	g.require(getTaskResponseDataFieldTaskType)
-}
-
-func (g *GetTaskResponseData) UnmarshalJSON(data []byte) error {
-	type unmarshaler GetTaskResponseData
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*g = GetTaskResponseData(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *g)
-	if err != nil {
-		return err
-	}
-	g.extraProperties = extraProperties
-	g.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (g *GetTaskResponseData) MarshalJSON() ([]byte, error) {
-	type embed GetTaskResponseData
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*g),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, g.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (g *GetTaskResponseData) String() string {
 	if len(g.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(g.rawJSON); err == nil {
 			return value
@@ -1178,7 +1465,7 @@ var (
 type IntentsListItem struct {
 	Name        string                          `json:"name" url:"name"`
 	Description *string                         `json:"description,omitempty" url:"description,omitempty"`
-	Schema      map[string]interface{}          `json:"schema" url:"schema"`
+	Schema      map[string]any                  `json:"schema" url:"schema"`
 	Responses   []*IntentsListItemResponsesItem `json:"responses,omitempty" url:"responses,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
@@ -1202,7 +1489,7 @@ func (i *IntentsListItem) GetDescription() *string {
 	return i.Description
 }
 
-func (i *IntentsListItem) GetSchema() map[string]interface{} {
+func (i *IntentsListItem) GetSchema() map[string]any {
 	if i == nil {
 		return nil
 	}
@@ -1217,14 +1504,19 @@ func (i *IntentsListItem) GetResponses() []*IntentsListItemResponsesItem {
 }
 
 func (i *IntentsListItem) GetExtraProperties() map[string]interface{} {
+	if i == nil {
+		return nil
+	}
 	return i.extraProperties
 }
 
 func (i *IntentsListItem) require(field *big.Int) {
-	if i.explicitFields == nil {
-		i.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if i.explicitFields != nil {
+		next.Set(i.explicitFields)
 	}
-	i.explicitFields.Or(i.explicitFields, field)
+	next.Or(next, field)
+	i.explicitFields = next
 }
 
 // SetName sets the Name field and marks it as non-optional;
@@ -1243,7 +1535,7 @@ func (i *IntentsListItem) SetDescription(description *string) {
 
 // SetSchema sets the Schema field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (i *IntentsListItem) SetSchema(schema map[string]interface{}) {
+func (i *IntentsListItem) SetSchema(schema map[string]any) {
 	i.Schema = schema
 	i.require(intentsListItemFieldSchema)
 }
@@ -1283,6 +1575,9 @@ func (i *IntentsListItem) MarshalJSON() ([]byte, error) {
 }
 
 func (i *IntentsListItem) String() string {
+	if i == nil {
+		return "<nil>"
+	}
 	if len(i.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(i.rawJSON); err == nil {
 			return value
@@ -1301,9 +1596,9 @@ var (
 )
 
 type IntentsListItemResponsesItem struct {
-	Name        *string                `json:"name,omitempty" url:"name,omitempty"`
-	Description *string                `json:"description,omitempty" url:"description,omitempty"`
-	Schema      map[string]interface{} `json:"schema,omitempty" url:"schema,omitempty"`
+	Name        *string        `json:"name,omitempty" url:"name,omitempty"`
+	Description *string        `json:"description,omitempty" url:"description,omitempty"`
+	Schema      map[string]any `json:"schema,omitempty" url:"schema,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -1326,7 +1621,7 @@ func (i *IntentsListItemResponsesItem) GetDescription() *string {
 	return i.Description
 }
 
-func (i *IntentsListItemResponsesItem) GetSchema() map[string]interface{} {
+func (i *IntentsListItemResponsesItem) GetSchema() map[string]any {
 	if i == nil {
 		return nil
 	}
@@ -1334,14 +1629,19 @@ func (i *IntentsListItemResponsesItem) GetSchema() map[string]interface{} {
 }
 
 func (i *IntentsListItemResponsesItem) GetExtraProperties() map[string]interface{} {
+	if i == nil {
+		return nil
+	}
 	return i.extraProperties
 }
 
 func (i *IntentsListItemResponsesItem) require(field *big.Int) {
-	if i.explicitFields == nil {
-		i.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if i.explicitFields != nil {
+		next.Set(i.explicitFields)
 	}
-	i.explicitFields.Or(i.explicitFields, field)
+	next.Or(next, field)
+	i.explicitFields = next
 }
 
 // SetName sets the Name field and marks it as non-optional;
@@ -1360,7 +1660,7 @@ func (i *IntentsListItemResponsesItem) SetDescription(description *string) {
 
 // SetSchema sets the Schema field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (i *IntentsListItemResponsesItem) SetSchema(schema map[string]interface{}) {
+func (i *IntentsListItemResponsesItem) SetSchema(schema map[string]any) {
 	i.Schema = schema
 	i.require(intentsListItemResponsesItemFieldSchema)
 }
@@ -1393,6 +1693,9 @@ func (i *IntentsListItemResponsesItem) MarshalJSON() ([]byte, error) {
 }
 
 func (i *IntentsListItemResponsesItem) String() string {
+	if i == nil {
+		return "<nil>"
+	}
 	if len(i.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(i.rawJSON); err == nil {
 			return value
@@ -1404,11 +1707,11 @@ func (i *IntentsListItemResponsesItem) String() string {
 	return fmt.Sprintf("%#v", i)
 }
 
-// Response returned when listing intents for a mesh version.
 var (
 	listIntentsResponseFieldIntents = big.NewInt(1 << 0)
 )
 
+// Response returned when listing intents for a mesh version.
 type ListIntentsResponse struct {
 	Intents IntentsList `json:"intents" url:"intents"`
 
@@ -1427,14 +1730,19 @@ func (l *ListIntentsResponse) GetIntents() IntentsList {
 }
 
 func (l *ListIntentsResponse) GetExtraProperties() map[string]interface{} {
+	if l == nil {
+		return nil
+	}
 	return l.extraProperties
 }
 
 func (l *ListIntentsResponse) require(field *big.Int) {
-	if l.explicitFields == nil {
-		l.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if l.explicitFields != nil {
+		next.Set(l.explicitFields)
 	}
-	l.explicitFields.Or(l.explicitFields, field)
+	next.Or(next, field)
+	l.explicitFields = next
 }
 
 // SetIntents sets the Intents field and marks it as non-optional;
@@ -1472,6 +1780,9 @@ func (l *ListIntentsResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (l *ListIntentsResponse) String() string {
+	if l == nil {
+		return "<nil>"
+	}
 	if len(l.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
 			return value
@@ -1483,255 +1794,14 @@ func (l *ListIntentsResponse) String() string {
 	return fmt.Sprintf("%#v", l)
 }
 
-// Details about a message from the model
-type MessageEventData struct {
-	Type         string
-	Task         *TaskEventDetails
-	TaskResponse *TaskResponseEventDetails
-	Message      *MessageEventDetails
-	Thinking     *ThinkingEventDetails
-	Response     *ResponseEventDetails
-	Error        *ErrorEventDetails
-	Cancel       *CancelEventDetails
-}
-
-func (m *MessageEventData) GetType() string {
-	if m == nil {
-		return ""
-	}
-	return m.Type
-}
-
-func (m *MessageEventData) GetTask() *TaskEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Task
-}
-
-func (m *MessageEventData) GetTaskResponse() *TaskResponseEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.TaskResponse
-}
-
-func (m *MessageEventData) GetMessage() *MessageEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Message
-}
-
-func (m *MessageEventData) GetThinking() *ThinkingEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Thinking
-}
-
-func (m *MessageEventData) GetResponse() *ResponseEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Response
-}
-
-func (m *MessageEventData) GetError() *ErrorEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Error
-}
-
-func (m *MessageEventData) GetCancel() *CancelEventDetails {
-	if m == nil {
-		return nil
-	}
-	return m.Cancel
-}
-
-func (m *MessageEventData) UnmarshalJSON(data []byte) error {
-	var unmarshaler struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &unmarshaler); err != nil {
-		return err
-	}
-	m.Type = unmarshaler.Type
-	if unmarshaler.Type == "" {
-		return fmt.Errorf("%T did not include discriminant type", m)
-	}
-	switch unmarshaler.Type {
-	case "task":
-		value := new(TaskEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Task = value
-	case "task_response":
-		value := new(TaskResponseEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.TaskResponse = value
-	case "message":
-		value := new(MessageEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Message = value
-	case "thinking":
-		value := new(ThinkingEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Thinking = value
-	case "response":
-		value := new(ResponseEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Response = value
-	case "error":
-		value := new(ErrorEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Error = value
-	case "cancel":
-		value := new(CancelEventDetails)
-		if err := json.Unmarshal(data, &value); err != nil {
-			return err
-		}
-		m.Cancel = value
-	}
-	return nil
-}
-
-func (m MessageEventData) MarshalJSON() ([]byte, error) {
-	if err := m.validate(); err != nil {
-		return nil, err
-	}
-	if m.Task != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Task, "type", "task")
-	}
-	if m.TaskResponse != nil {
-		return internal.MarshalJSONWithExtraProperty(m.TaskResponse, "type", "task_response")
-	}
-	if m.Message != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Message, "type", "message")
-	}
-	if m.Thinking != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Thinking, "type", "thinking")
-	}
-	if m.Response != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Response, "type", "response")
-	}
-	if m.Error != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Error, "type", "error")
-	}
-	if m.Cancel != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Cancel, "type", "cancel")
-	}
-	return nil, fmt.Errorf("type %T does not define a non-empty union type", m)
-}
-
-type MessageEventDataVisitor interface {
-	VisitTask(*TaskEventDetails) error
-	VisitTaskResponse(*TaskResponseEventDetails) error
-	VisitMessage(*MessageEventDetails) error
-	VisitThinking(*ThinkingEventDetails) error
-	VisitResponse(*ResponseEventDetails) error
-	VisitError(*ErrorEventDetails) error
-	VisitCancel(*CancelEventDetails) error
-}
-
-func (m *MessageEventData) Accept(visitor MessageEventDataVisitor) error {
-	if m.Task != nil {
-		return visitor.VisitTask(m.Task)
-	}
-	if m.TaskResponse != nil {
-		return visitor.VisitTaskResponse(m.TaskResponse)
-	}
-	if m.Message != nil {
-		return visitor.VisitMessage(m.Message)
-	}
-	if m.Thinking != nil {
-		return visitor.VisitThinking(m.Thinking)
-	}
-	if m.Response != nil {
-		return visitor.VisitResponse(m.Response)
-	}
-	if m.Error != nil {
-		return visitor.VisitError(m.Error)
-	}
-	if m.Cancel != nil {
-		return visitor.VisitCancel(m.Cancel)
-	}
-	return fmt.Errorf("type %T does not define a non-empty union type", m)
-}
-
-func (m *MessageEventData) validate() error {
-	if m == nil {
-		return fmt.Errorf("type %T is nil", m)
-	}
-	var fields []string
-	if m.Task != nil {
-		fields = append(fields, "task")
-	}
-	if m.TaskResponse != nil {
-		fields = append(fields, "task_response")
-	}
-	if m.Message != nil {
-		fields = append(fields, "message")
-	}
-	if m.Thinking != nil {
-		fields = append(fields, "thinking")
-	}
-	if m.Response != nil {
-		fields = append(fields, "response")
-	}
-	if m.Error != nil {
-		fields = append(fields, "error")
-	}
-	if m.Cancel != nil {
-		fields = append(fields, "cancel")
-	}
-	if len(fields) == 0 {
-		if m.Type != "" {
-			return fmt.Errorf("type %T defines a discriminant set to %q but the field is not set", m, m.Type)
-		}
-		return fmt.Errorf("type %T is empty", m)
-	}
-	if len(fields) > 1 {
-		return fmt.Errorf("type %T defines values for %s, but only one value is allowed", m, fields)
-	}
-	if m.Type != "" {
-		field := fields[0]
-		if m.Type != field {
-			return fmt.Errorf(
-				"type %T defines a discriminant set to %q, but it does not match the %T field; either remove or update the discriminant to match",
-				m,
-				m.Type,
-				m,
-			)
-		}
-	}
-	return nil
-}
-
-// Details about a message from the model
 var (
-	messageEventDetailsFieldId   = big.NewInt(1 << 0)
-	messageEventDetailsFieldData = big.NewInt(1 << 1)
+	requestCreateOptionsFieldTags = big.NewInt(1 << 0)
 )
 
-type MessageEventDetails struct {
-	// The ID of the message event
-	Id string `json:"id" url:"id"`
-	// A progress message from the model to be shown to the user.
-	Data string `json:"data" url:"data"`
+// Settings for request.
+type RequestCreateOptions struct {
+	// Tags to apply to the request.
+	Tags []*Tag `json:"tags,omitempty" url:"tags,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -1740,82 +1810,76 @@ type MessageEventDetails struct {
 	rawJSON         json.RawMessage
 }
 
-func (m *MessageEventDetails) GetId() string {
-	if m == nil {
-		return ""
+func (r *RequestCreateOptions) GetTags() []*Tag {
+	if r == nil {
+		return nil
 	}
-	return m.Id
+	return r.Tags
 }
 
-func (m *MessageEventDetails) GetData() string {
-	if m == nil {
-		return ""
+func (r *RequestCreateOptions) GetExtraProperties() map[string]interface{} {
+	if r == nil {
+		return nil
 	}
-	return m.Data
+	return r.extraProperties
 }
 
-func (m *MessageEventDetails) GetExtraProperties() map[string]interface{} {
-	return m.extraProperties
-}
-
-func (m *MessageEventDetails) require(field *big.Int) {
-	if m.explicitFields == nil {
-		m.explicitFields = big.NewInt(0)
+func (r *RequestCreateOptions) require(field *big.Int) {
+	next := new(big.Int)
+	if r.explicitFields != nil {
+		next.Set(r.explicitFields)
 	}
-	m.explicitFields.Or(m.explicitFields, field)
+	next.Or(next, field)
+	r.explicitFields = next
 }
 
-// SetId sets the Id field and marks it as non-optional;
+// SetTags sets the Tags field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (m *MessageEventDetails) SetId(id string) {
-	m.Id = id
-	m.require(messageEventDetailsFieldId)
+func (r *RequestCreateOptions) SetTags(tags []*Tag) {
+	r.Tags = tags
+	r.require(requestCreateOptionsFieldTags)
 }
 
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (m *MessageEventDetails) SetData(data string) {
-	m.Data = data
-	m.require(messageEventDetailsFieldData)
-}
-
-func (m *MessageEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler MessageEventDetails
+func (r *RequestCreateOptions) UnmarshalJSON(data []byte) error {
+	type unmarshaler RequestCreateOptions
 	var value unmarshaler
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-	*m = MessageEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *m)
+	*r = RequestCreateOptions(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *r)
 	if err != nil {
 		return err
 	}
-	m.extraProperties = extraProperties
-	m.rawJSON = json.RawMessage(data)
+	r.extraProperties = extraProperties
+	r.rawJSON = json.RawMessage(data)
 	return nil
 }
 
-func (m *MessageEventDetails) MarshalJSON() ([]byte, error) {
-	type embed MessageEventDetails
+func (r *RequestCreateOptions) MarshalJSON() ([]byte, error) {
+	type embed RequestCreateOptions
 	var marshaler = struct {
 		embed
 	}{
-		embed: embed(*m),
+		embed: embed(*r),
 	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, m.explicitFields)
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, r.explicitFields)
 	return json.Marshal(explicitMarshaler)
 }
 
-func (m *MessageEventDetails) String() string {
-	if len(m.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(m.rawJSON); err == nil {
+func (r *RequestCreateOptions) String() string {
+	if r == nil {
+		return "<nil>"
+	}
+	if len(r.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(r.rawJSON); err == nil {
 			return value
 		}
 	}
-	if value, err := internal.StringifyJSON(m); err == nil {
+	if value, err := internal.StringifyJSON(r); err == nil {
 		return value
 	}
-	return fmt.Sprintf("%#v", m)
+	return fmt.Sprintf("%#v", r)
 }
 
 // A chunk of data in the event stream
@@ -1829,6 +1893,8 @@ type ResponseEventData struct {
 	Error        *ErrorEventDetails
 	Cancel       *CancelEventDetails
 	ServerError  *ServerErrorEventDetails
+
+	rawJSON json.RawMessage
 }
 
 func (r *ResponseEventData) GetType() string {
@@ -1955,6 +2021,7 @@ func (r *ResponseEventData) UnmarshalJSON(data []byte) error {
 		}
 		r.ServerError = value
 	}
+	r.rawJSON = json.RawMessage(data)
 	return nil
 }
 
@@ -1985,6 +2052,9 @@ func (r ResponseEventData) MarshalJSON() ([]byte, error) {
 	}
 	if r.ServerError != nil {
 		return internal.MarshalJSONWithExtraProperty(r.ServerError, "type", "server_error")
+	}
+	if len(r.rawJSON) > 0 {
+		return r.rawJSON, nil
 	}
 	return nil, fmt.Errorf("type %T does not define a non-empty union type", r)
 }
@@ -2059,6 +2129,9 @@ func (r *ResponseEventData) validate() error {
 	}
 	if len(fields) == 0 {
 		if r.Type != "" {
+			if len(r.rawJSON) > 0 {
+				return nil
+			}
 			return fmt.Errorf("type %T defines a discriminant set to %q but the field is not set", r, r.Type)
 		}
 		return fmt.Errorf("type %T is empty", r)
@@ -2080,109 +2153,14 @@ func (r *ResponseEventData) validate() error {
 	return nil
 }
 
-// Details about the final response from the model
 var (
-	responseEventDetailsFieldId   = big.NewInt(1 << 0)
-	responseEventDetailsFieldData = big.NewInt(1 << 1)
+	serverErrorEventDetailsFieldType  = big.NewInt(1 << 0)
+	serverErrorEventDetailsFieldError = big.NewInt(1 << 1)
 )
-
-type ResponseEventDetails struct {
-	// The ID of the response event
-	Id string `json:"id" url:"id"`
-	// The final response from the model. The structure of this object will conform to one of the output message type schemas defined on the Intent.
-	Data map[string]interface{} `json:"data" url:"data"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (r *ResponseEventDetails) GetId() string {
-	if r == nil {
-		return ""
-	}
-	return r.Id
-}
-
-func (r *ResponseEventDetails) GetData() map[string]interface{} {
-	if r == nil {
-		return nil
-	}
-	return r.Data
-}
-
-func (r *ResponseEventDetails) GetExtraProperties() map[string]interface{} {
-	return r.extraProperties
-}
-
-func (r *ResponseEventDetails) require(field *big.Int) {
-	if r.explicitFields == nil {
-		r.explicitFields = big.NewInt(0)
-	}
-	r.explicitFields.Or(r.explicitFields, field)
-}
-
-// SetId sets the Id field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (r *ResponseEventDetails) SetId(id string) {
-	r.Id = id
-	r.require(responseEventDetailsFieldId)
-}
-
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (r *ResponseEventDetails) SetData(data map[string]interface{}) {
-	r.Data = data
-	r.require(responseEventDetailsFieldData)
-}
-
-func (r *ResponseEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler ResponseEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*r = ResponseEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *r)
-	if err != nil {
-		return err
-	}
-	r.extraProperties = extraProperties
-	r.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (r *ResponseEventDetails) MarshalJSON() ([]byte, error) {
-	type embed ResponseEventDetails
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*r),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, r.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (r *ResponseEventDetails) String() string {
-	if len(r.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(r.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(r); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", r)
-}
 
 // Details about an error that occurred during request processing
-var (
-	serverErrorEventDetailsFieldError = big.NewInt(1 << 0)
-)
-
 type ServerErrorEventDetails struct {
+	Type ServerErrorEventDetailsType `json:"type" url:"type"`
 	// A description of the error that occurred.
 	Error string `json:"error" url:"error"`
 
@@ -2193,6 +2171,13 @@ type ServerErrorEventDetails struct {
 	rawJSON         json.RawMessage
 }
 
+func (s *ServerErrorEventDetails) GetType() ServerErrorEventDetailsType {
+	if s == nil {
+		return ""
+	}
+	return s.Type
+}
+
 func (s *ServerErrorEventDetails) GetError() string {
 	if s == nil {
 		return ""
@@ -2201,14 +2186,26 @@ func (s *ServerErrorEventDetails) GetError() string {
 }
 
 func (s *ServerErrorEventDetails) GetExtraProperties() map[string]interface{} {
+	if s == nil {
+		return nil
+	}
 	return s.extraProperties
 }
 
 func (s *ServerErrorEventDetails) require(field *big.Int) {
-	if s.explicitFields == nil {
-		s.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if s.explicitFields != nil {
+		next.Set(s.explicitFields)
 	}
-	s.explicitFields.Or(s.explicitFields, field)
+	next.Or(next, field)
+	s.explicitFields = next
+}
+
+// SetType sets the Type field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (s *ServerErrorEventDetails) SetType(type_ ServerErrorEventDetailsType) {
+	s.Type = type_
+	s.require(serverErrorEventDetailsFieldType)
 }
 
 // SetError sets the Error field and marks it as non-optional;
@@ -2246,6 +2243,9 @@ func (s *ServerErrorEventDetails) MarshalJSON() ([]byte, error) {
 }
 
 func (s *ServerErrorEventDetails) String() string {
+	if s == nil {
+		return "<nil>"
+	}
 	if len(s.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
 			return value
@@ -2257,16 +2257,34 @@ func (s *ServerErrorEventDetails) String() string {
 	return fmt.Sprintf("%#v", s)
 }
 
-// Details about a task the user must perform to continue processing the request
-var (
-	taskEventDetailsFieldId   = big.NewInt(1 << 0)
-	taskEventDetailsFieldData = big.NewInt(1 << 1)
+type ServerErrorEventDetailsType string
+
+const (
+	ServerErrorEventDetailsTypeServerError ServerErrorEventDetailsType = "server_error"
 )
 
-type TaskEventDetails struct {
-	// The ID of the task event
-	Id   string                `json:"id" url:"id"`
-	Data *TaskEventDetailsData `json:"data" url:"data"`
+func NewServerErrorEventDetailsTypeFromString(s string) (ServerErrorEventDetailsType, error) {
+	switch s {
+	case "server_error":
+		return ServerErrorEventDetailsTypeServerError, nil
+	}
+	var t ServerErrorEventDetailsType
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (s ServerErrorEventDetailsType) Ptr() *ServerErrorEventDetailsType {
+	return &s
+}
+
+var (
+	tagFieldName  = big.NewInt(1 << 0)
+	tagFieldValue = big.NewInt(1 << 1)
+)
+
+// A name/value tag.
+type Tag struct {
+	Name  string `json:"name" url:"name"`
+	Value string `json:"value" url:"value"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -2275,52 +2293,57 @@ type TaskEventDetails struct {
 	rawJSON         json.RawMessage
 }
 
-func (t *TaskEventDetails) GetId() string {
+func (t *Tag) GetName() string {
 	if t == nil {
 		return ""
 	}
-	return t.Id
+	return t.Name
 }
 
-func (t *TaskEventDetails) GetData() *TaskEventDetailsData {
+func (t *Tag) GetValue() string {
+	if t == nil {
+		return ""
+	}
+	return t.Value
+}
+
+func (t *Tag) GetExtraProperties() map[string]interface{} {
 	if t == nil {
 		return nil
 	}
-	return t.Data
-}
-
-func (t *TaskEventDetails) GetExtraProperties() map[string]interface{} {
 	return t.extraProperties
 }
 
-func (t *TaskEventDetails) require(field *big.Int) {
-	if t.explicitFields == nil {
-		t.explicitFields = big.NewInt(0)
+func (t *Tag) require(field *big.Int) {
+	next := new(big.Int)
+	if t.explicitFields != nil {
+		next.Set(t.explicitFields)
 	}
-	t.explicitFields.Or(t.explicitFields, field)
+	next.Or(next, field)
+	t.explicitFields = next
 }
 
-// SetId sets the Id field and marks it as non-optional;
+// SetName sets the Name field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskEventDetails) SetId(id string) {
-	t.Id = id
-	t.require(taskEventDetailsFieldId)
+func (t *Tag) SetName(name string) {
+	t.Name = name
+	t.require(tagFieldName)
 }
 
-// SetData sets the Data field and marks it as non-optional;
+// SetValue sets the Value field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskEventDetails) SetData(data *TaskEventDetailsData) {
-	t.Data = data
-	t.require(taskEventDetailsFieldData)
+func (t *Tag) SetValue(value string) {
+	t.Value = value
+	t.require(tagFieldValue)
 }
 
-func (t *TaskEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler TaskEventDetails
+func (t *Tag) UnmarshalJSON(data []byte) error {
+	type unmarshaler Tag
 	var value unmarshaler
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-	*t = TaskEventDetails(value)
+	*t = Tag(value)
 	extraProperties, err := internal.ExtractExtraProperties(data, *t)
 	if err != nil {
 		return err
@@ -2330,8 +2353,8 @@ func (t *TaskEventDetails) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (t *TaskEventDetails) MarshalJSON() ([]byte, error) {
-	type embed TaskEventDetails
+func (t *Tag) MarshalJSON() ([]byte, error) {
+	type embed Tag
 	var marshaler = struct {
 		embed
 	}{
@@ -2341,313 +2364,10 @@ func (t *TaskEventDetails) MarshalJSON() ([]byte, error) {
 	return json.Marshal(explicitMarshaler)
 }
 
-func (t *TaskEventDetails) String() string {
-	if len(t.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(t.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(t); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", t)
-}
-
-var (
-	taskEventDetailsDataFieldInput    = big.NewInt(1 << 0)
-	taskEventDetailsDataFieldTaskType = big.NewInt(1 << 1)
-)
-
-type TaskEventDetailsData struct {
-	// Any information necessary to perform the task. Varies according to `task_type`. For the `ask_question` task type (the only currently supported type), will consist of an object with a single `question` property containing the question the model desires the answer for. In the future, custom task definitions will be allowed, and the object structure will conform to the schema defined in the task type.
-	Input map[string]interface{} `json:"input" url:"input"`
-	// Currently will be "ask_question", additional task types will be defined in the future.
-	TaskType string `json:"task_type" url:"task_type"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (t *TaskEventDetailsData) GetInput() map[string]interface{} {
+func (t *Tag) String() string {
 	if t == nil {
-		return nil
+		return "<nil>"
 	}
-	return t.Input
-}
-
-func (t *TaskEventDetailsData) GetTaskType() string {
-	if t == nil {
-		return ""
-	}
-	return t.TaskType
-}
-
-func (t *TaskEventDetailsData) GetExtraProperties() map[string]interface{} {
-	return t.extraProperties
-}
-
-func (t *TaskEventDetailsData) require(field *big.Int) {
-	if t.explicitFields == nil {
-		t.explicitFields = big.NewInt(0)
-	}
-	t.explicitFields.Or(t.explicitFields, field)
-}
-
-// SetInput sets the Input field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskEventDetailsData) SetInput(input map[string]interface{}) {
-	t.Input = input
-	t.require(taskEventDetailsDataFieldInput)
-}
-
-// SetTaskType sets the TaskType field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskEventDetailsData) SetTaskType(taskType string) {
-	t.TaskType = taskType
-	t.require(taskEventDetailsDataFieldTaskType)
-}
-
-func (t *TaskEventDetailsData) UnmarshalJSON(data []byte) error {
-	type unmarshaler TaskEventDetailsData
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*t = TaskEventDetailsData(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *t)
-	if err != nil {
-		return err
-	}
-	t.extraProperties = extraProperties
-	t.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (t *TaskEventDetailsData) MarshalJSON() ([]byte, error) {
-	type embed TaskEventDetailsData
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*t),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, t.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (t *TaskEventDetailsData) String() string {
-	if len(t.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(t.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(t); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", t)
-}
-
-// Details about a task the user completed
-var (
-	taskResponseEventDetailsFieldId        = big.NewInt(1 << 0)
-	taskResponseEventDetailsFieldData      = big.NewInt(1 << 1)
-	taskResponseEventDetailsFieldInReplyTo = big.NewInt(1 << 2)
-)
-
-type TaskResponseEventDetails struct {
-	// The ID of the task response event
-	Id   string      `json:"id" url:"id"`
-	Data interface{} `json:"data" url:"data"`
-	// The ID of the task event this is a response to.
-	InReplyTo string `json:"in_reply_to" url:"in_reply_to"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (t *TaskResponseEventDetails) GetId() string {
-	if t == nil {
-		return ""
-	}
-	return t.Id
-}
-
-func (t *TaskResponseEventDetails) GetData() interface{} {
-	if t == nil {
-		return nil
-	}
-	return t.Data
-}
-
-func (t *TaskResponseEventDetails) GetInReplyTo() string {
-	if t == nil {
-		return ""
-	}
-	return t.InReplyTo
-}
-
-func (t *TaskResponseEventDetails) GetExtraProperties() map[string]interface{} {
-	return t.extraProperties
-}
-
-func (t *TaskResponseEventDetails) require(field *big.Int) {
-	if t.explicitFields == nil {
-		t.explicitFields = big.NewInt(0)
-	}
-	t.explicitFields.Or(t.explicitFields, field)
-}
-
-// SetId sets the Id field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskResponseEventDetails) SetId(id string) {
-	t.Id = id
-	t.require(taskResponseEventDetailsFieldId)
-}
-
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskResponseEventDetails) SetData(data interface{}) {
-	t.Data = data
-	t.require(taskResponseEventDetailsFieldData)
-}
-
-// SetInReplyTo sets the InReplyTo field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskResponseEventDetails) SetInReplyTo(inReplyTo string) {
-	t.InReplyTo = inReplyTo
-	t.require(taskResponseEventDetailsFieldInReplyTo)
-}
-
-func (t *TaskResponseEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler TaskResponseEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*t = TaskResponseEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *t)
-	if err != nil {
-		return err
-	}
-	t.extraProperties = extraProperties
-	t.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (t *TaskResponseEventDetails) MarshalJSON() ([]byte, error) {
-	type embed TaskResponseEventDetails
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*t),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, t.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (t *TaskResponseEventDetails) String() string {
-	if len(t.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(t.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(t); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", t)
-}
-
-// Details about a thinking event from the model
-var (
-	thinkingEventDetailsFieldId   = big.NewInt(1 << 0)
-	thinkingEventDetailsFieldData = big.NewInt(1 << 1)
-)
-
-type ThinkingEventDetails struct {
-	// The ID of the thinking event
-	Id string `json:"id" url:"id"`
-	// A description of the model's current thinking process.
-	Data string `json:"data" url:"data"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (t *ThinkingEventDetails) GetId() string {
-	if t == nil {
-		return ""
-	}
-	return t.Id
-}
-
-func (t *ThinkingEventDetails) GetData() string {
-	if t == nil {
-		return ""
-	}
-	return t.Data
-}
-
-func (t *ThinkingEventDetails) GetExtraProperties() map[string]interface{} {
-	return t.extraProperties
-}
-
-func (t *ThinkingEventDetails) require(field *big.Int) {
-	if t.explicitFields == nil {
-		t.explicitFields = big.NewInt(0)
-	}
-	t.explicitFields.Or(t.explicitFields, field)
-}
-
-// SetId sets the Id field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *ThinkingEventDetails) SetId(id string) {
-	t.Id = id
-	t.require(thinkingEventDetailsFieldId)
-}
-
-// SetData sets the Data field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (t *ThinkingEventDetails) SetData(data string) {
-	t.Data = data
-	t.require(thinkingEventDetailsFieldData)
-}
-
-func (t *ThinkingEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler ThinkingEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*t = ThinkingEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *t)
-	if err != nil {
-		return err
-	}
-	t.extraProperties = extraProperties
-	t.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (t *ThinkingEventDetails) MarshalJSON() ([]byte, error) {
-	type embed ThinkingEventDetails
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*t),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, t.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (t *ThinkingEventDetails) String() string {
 	if len(t.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(t.rawJSON); err == nil {
 			return value
@@ -2682,14 +2402,19 @@ func (a *AttachAssetsToConversationResponse) GetAttachments() []*AttachmentInfo 
 }
 
 func (a *AttachAssetsToConversationResponse) GetExtraProperties() map[string]interface{} {
+	if a == nil {
+		return nil
+	}
 	return a.extraProperties
 }
 
 func (a *AttachAssetsToConversationResponse) require(field *big.Int) {
-	if a.explicitFields == nil {
-		a.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
 	}
-	a.explicitFields.Or(a.explicitFields, field)
+	next.Or(next, field)
+	a.explicitFields = next
 }
 
 // SetAttachments sets the Attachments field and marks it as non-optional;
@@ -2727,6 +2452,9 @@ func (a *AttachAssetsToConversationResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (a *AttachAssetsToConversationResponse) String() string {
+	if a == nil {
+		return "<nil>"
+	}
 	if len(a.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
 			return value
@@ -2761,14 +2489,19 @@ func (g *GetConversationRequestsResponse) GetRequests() []*GetConversationReques
 }
 
 func (g *GetConversationRequestsResponse) GetExtraProperties() map[string]interface{} {
+	if g == nil {
+		return nil
+	}
 	return g.extraProperties
 }
 
 func (g *GetConversationRequestsResponse) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
 // SetRequests sets the Requests field and marks it as non-optional;
@@ -2806,6 +2539,9 @@ func (g *GetConversationRequestsResponse) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GetConversationRequestsResponse) String() string {
+	if g == nil {
+		return "<nil>"
+	}
 	if len(g.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(g.rawJSON); err == nil {
 			return value
@@ -2818,17 +2554,20 @@ func (g *GetConversationRequestsResponse) String() string {
 }
 
 var (
-	getConversationRequestsResponseRequestsItemFieldRequestId    = big.NewInt(1 << 0)
+	getConversationRequestsResponseRequestsItemFieldRequestID    = big.NewInt(1 << 0)
 	getConversationRequestsResponseRequestsItemFieldInputMessage = big.NewInt(1 << 1)
 	getConversationRequestsResponseRequestsItemFieldStatus       = big.NewInt(1 << 2)
-	getConversationRequestsResponseRequestsItemFieldEvents       = big.NewInt(1 << 3)
+	getConversationRequestsResponseRequestsItemFieldTags         = big.NewInt(1 << 3)
+	getConversationRequestsResponseRequestsItemFieldEvents       = big.NewInt(1 << 4)
 )
 
 type GetConversationRequestsResponseRequestsItem struct {
-	RequestId    string                                            `json:"request_id" url:"request_id"`
-	InputMessage map[string]interface{}                            `json:"input_message" url:"input_message"`
+	RequestID    string                                            `json:"request_id" url:"request_id"`
+	InputMessage map[string]any                                    `json:"input_message" url:"input_message"`
 	Status       GetConversationRequestsResponseRequestsItemStatus `json:"status" url:"status"`
-	Events       []*MessageEventData                               `json:"events" url:"events"`
+	// The tags supplied when the request was created.
+	Tags   []*Tag              `json:"tags" url:"tags"`
+	Events []*MessageEventData `json:"events" url:"events"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -2837,14 +2576,14 @@ type GetConversationRequestsResponseRequestsItem struct {
 	rawJSON         json.RawMessage
 }
 
-func (g *GetConversationRequestsResponseRequestsItem) GetRequestId() string {
+func (g *GetConversationRequestsResponseRequestsItem) GetRequestID() string {
 	if g == nil {
 		return ""
 	}
-	return g.RequestId
+	return g.RequestID
 }
 
-func (g *GetConversationRequestsResponseRequestsItem) GetInputMessage() map[string]interface{} {
+func (g *GetConversationRequestsResponseRequestsItem) GetInputMessage() map[string]any {
 	if g == nil {
 		return nil
 	}
@@ -2858,6 +2597,13 @@ func (g *GetConversationRequestsResponseRequestsItem) GetStatus() GetConversatio
 	return g.Status
 }
 
+func (g *GetConversationRequestsResponseRequestsItem) GetTags() []*Tag {
+	if g == nil {
+		return nil
+	}
+	return g.Tags
+}
+
 func (g *GetConversationRequestsResponseRequestsItem) GetEvents() []*MessageEventData {
 	if g == nil {
 		return nil
@@ -2866,26 +2612,31 @@ func (g *GetConversationRequestsResponseRequestsItem) GetEvents() []*MessageEven
 }
 
 func (g *GetConversationRequestsResponseRequestsItem) GetExtraProperties() map[string]interface{} {
+	if g == nil {
+		return nil
+	}
 	return g.extraProperties
 }
 
 func (g *GetConversationRequestsResponseRequestsItem) require(field *big.Int) {
-	if g.explicitFields == nil {
-		g.explicitFields = big.NewInt(0)
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
 	}
-	g.explicitFields.Or(g.explicitFields, field)
+	next.Or(next, field)
+	g.explicitFields = next
 }
 
-// SetRequestId sets the RequestId field and marks it as non-optional;
+// SetRequestID sets the RequestID field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetConversationRequestsResponseRequestsItem) SetRequestId(requestId string) {
-	g.RequestId = requestId
-	g.require(getConversationRequestsResponseRequestsItemFieldRequestId)
+func (g *GetConversationRequestsResponseRequestsItem) SetRequestID(requestID string) {
+	g.RequestID = requestID
+	g.require(getConversationRequestsResponseRequestsItemFieldRequestID)
 }
 
 // SetInputMessage sets the InputMessage field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetConversationRequestsResponseRequestsItem) SetInputMessage(inputMessage map[string]interface{}) {
+func (g *GetConversationRequestsResponseRequestsItem) SetInputMessage(inputMessage map[string]any) {
 	g.InputMessage = inputMessage
 	g.require(getConversationRequestsResponseRequestsItemFieldInputMessage)
 }
@@ -2895,6 +2646,13 @@ func (g *GetConversationRequestsResponseRequestsItem) SetInputMessage(inputMessa
 func (g *GetConversationRequestsResponseRequestsItem) SetStatus(status GetConversationRequestsResponseRequestsItemStatus) {
 	g.Status = status
 	g.require(getConversationRequestsResponseRequestsItemFieldStatus)
+}
+
+// SetTags sets the Tags field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetConversationRequestsResponseRequestsItem) SetTags(tags []*Tag) {
+	g.Tags = tags
+	g.require(getConversationRequestsResponseRequestsItemFieldTags)
 }
 
 // SetEvents sets the Events field and marks it as non-optional;
@@ -2932,6 +2690,9 @@ func (g *GetConversationRequestsResponseRequestsItem) MarshalJSON() ([]byte, err
 }
 
 func (g *GetConversationRequestsResponseRequestsItem) String() string {
+	if g == nil {
+		return "<nil>"
+	}
 	if len(g.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(g.rawJSON); err == nil {
 			return value

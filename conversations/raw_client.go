@@ -4,11 +4,12 @@ package conversations
 
 import (
 	context "context"
+	http "net/http"
+
 	partiteai "github.com/partite-ai/sdk-go"
 	core "github.com/partite-ai/sdk-go/core"
 	internal "github.com/partite-ai/sdk-go/internal"
 	option "github.com/partite-ai/sdk-go/option"
-	http "net/http"
 )
 
 type RawClient struct {
@@ -23,8 +24,9 @@ func NewRawClient(options *core.RequestOptions) *RawClient {
 		baseURL: options.BaseURL,
 		caller: internal.NewCaller(
 			&internal.CallerParams{
-				Client:      options.HTTPClient,
-				MaxAttempts: options.MaxAttempts,
+				Client:         options.HTTPClient,
+				MaxAttempts:    options.MaxAttempts,
+				DisableRetries: options.DisableRetries,
 			},
 		),
 	}
@@ -53,6 +55,7 @@ func (r *RawClient) CreateEmptyConversation(
 		r.options.ToHeader(),
 		options.ToHeader(),
 	)
+	headers.Add("Content-Type", "application/json")
 	var response *partiteai.CreateConversationResponse
 	raw, err := r.caller.Call(
 		ctx,
@@ -61,9 +64,11 @@ func (r *RawClient) CreateEmptyConversation(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
+			Request:         request,
 			Response:        &response,
 			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
 		},
@@ -109,6 +114,7 @@ func (r *RawClient) GetIntentsForNewConversation(
 			Method:          http.MethodGet,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -156,6 +162,16 @@ func (r *RawClient) CreateConversationWithInitialRequest(
 	if err := writer.WriteJSON("input_message", request.InputMessage); err != nil {
 		return nil, err
 	}
+	if request.ConversationOptions != nil {
+		if err := writer.WriteJSON("conversation_options", request.ConversationOptions); err != nil {
+			return nil, err
+		}
+	}
+	if request.RequestOptions != nil {
+		if err := writer.WriteJSON("request_options", request.RequestOptions); err != nil {
+			return nil, err
+		}
+	}
 	for _, f := range request.Attachments {
 		if err := writer.WriteFile("attachments", f); err != nil {
 			return nil, err
@@ -174,6 +190,7 @@ func (r *RawClient) CreateConversationWithInitialRequest(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -186,6 +203,51 @@ func (r *RawClient) CreateConversationWithInitialRequest(
 		return nil, err
 	}
 	return &core.Response[*partiteai.CreateRequestResponse]{
+		StatusCode: raw.StatusCode,
+		Header:     raw.Header,
+		Body:       response,
+	}, nil
+}
+
+func (r *RawClient) GetConversation(
+	ctx context.Context,
+	request *partiteai.GetConversationRequest,
+	opts ...option.RequestOption,
+) (*core.Response[*partiteai.Conversation], error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		r.baseURL,
+		"https://api.partite.ai",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/conversations/%v",
+		request.ConversationID,
+	)
+	headers := internal.MergeHeaders(
+		r.options.ToHeader(),
+		options.ToHeader(),
+	)
+	var response *partiteai.Conversation
+	raw, err := r.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &core.Response[*partiteai.Conversation]{
 		StatusCode: raw.StatusCode,
 		Header:     raw.Header,
 		Body:       response,
@@ -205,7 +267,7 @@ func (r *RawClient) GetIntentsForConversation(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/intents",
-		request.ConversationId,
+		request.ConversationID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -219,6 +281,7 @@ func (r *RawClient) GetIntentsForConversation(
 			Method:          http.MethodGet,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -249,7 +312,7 @@ func (r *RawClient) CreateConversationRequest(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/intents/%v",
-		request.ConversationId,
+		request.ConversationID,
 		request.IntentName,
 	)
 	headers := internal.MergeHeaders(
@@ -259,6 +322,11 @@ func (r *RawClient) CreateConversationRequest(
 	writer := internal.NewMultipartWriter()
 	if err := writer.WriteJSON("input_message", request.InputMessage); err != nil {
 		return nil, err
+	}
+	if request.RequestOptions != nil {
+		if err := writer.WriteJSON("request_options", request.RequestOptions); err != nil {
+			return nil, err
+		}
 	}
 	for _, f := range request.Attachments {
 		if err := writer.WriteFile("attachments", f); err != nil {
@@ -278,6 +346,7 @@ func (r *RawClient) CreateConversationRequest(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -309,7 +378,7 @@ func (r *RawClient) GetConversationRequests(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/requests",
-		request.ConversationId,
+		request.ConversationID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -323,6 +392,7 @@ func (r *RawClient) GetConversationRequests(
 			Method:          http.MethodGet,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -353,8 +423,8 @@ func (r *RawClient) CancelRequest(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/requests/%v/cancel",
-		request.ConversationId,
-		request.RequestId,
+		request.ConversationID,
+		request.RequestID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -367,6 +437,7 @@ func (r *RawClient) CancelRequest(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -396,9 +467,9 @@ func (r *RawClient) CompleteTask(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/requests/%v/tasks/%v/complete",
-		request.ConversationId,
-		request.RequestId,
-		request.TaskId,
+		request.ConversationID,
+		request.RequestID,
+		request.TaskID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -412,6 +483,7 @@ func (r *RawClient) CompleteTask(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -442,8 +514,8 @@ func (r *RawClient) GetRequestResponse(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/requests/%v/response",
-		request.ConversationId,
-		request.RequestId,
+		request.ConversationID,
+		request.RequestID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -457,6 +529,7 @@ func (r *RawClient) GetRequestResponse(
 			Method:          http.MethodGet,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -487,8 +560,8 @@ func (r *RawClient) GetRequestTask(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/requests/%v/task",
-		request.ConversationId,
-		request.RequestId,
+		request.ConversationID,
+		request.RequestID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -502,6 +575,7 @@ func (r *RawClient) GetRequestTask(
 			Method:          http.MethodGet,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -532,7 +606,7 @@ func (r *RawClient) AttachAssetsToConversation(
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/conversations/%v/assets",
-		request.ConversationId,
+		request.ConversationID,
 	)
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
@@ -557,6 +631,7 @@ func (r *RawClient) AttachAssetsToConversation(
 			Method:          http.MethodPost,
 			Headers:         headers,
 			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
@@ -569,6 +644,51 @@ func (r *RawClient) AttachAssetsToConversation(
 		return nil, err
 	}
 	return &core.Response[*partiteai.AttachAssetsToConversationResponse]{
+		StatusCode: raw.StatusCode,
+		Header:     raw.Header,
+		Body:       response,
+	}, nil
+}
+
+func (r *RawClient) GetConversationByExternalID(
+	ctx context.Context,
+	request *partiteai.GetConversationByExternalIDRequest,
+	opts ...option.RequestOption,
+) (*core.Response[*partiteai.Conversation], error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		r.baseURL,
+		"https://api.partite.ai",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/conversations/lookup/external-id/%v",
+		request.ExternalID,
+	)
+	headers := internal.MergeHeaders(
+		r.options.ToHeader(),
+		options.ToHeader(),
+	)
+	var response *partiteai.Conversation
+	raw, err := r.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &core.Response[*partiteai.Conversation]{
 		StatusCode: raw.StatusCode,
 		Header:     raw.Header,
 		Body:       response,

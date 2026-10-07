@@ -3,15 +3,18 @@
 package client
 
 import (
+	os "os"
+
 	conversations "github.com/partite-ai/sdk-go/conversations"
 	core "github.com/partite-ai/sdk-go/core"
 	internal "github.com/partite-ai/sdk-go/internal"
+	notificationchannels "github.com/partite-ai/sdk-go/notificationchannels"
 	option "github.com/partite-ai/sdk-go/option"
-	os "os"
 )
 
 type Client struct {
-	Conversations *conversations.Client
+	Conversations        *conversations.Client
+	NotificationChannels *notificationchannels.Client
 
 	options *core.RequestOptions
 	baseURL string
@@ -20,20 +23,22 @@ type Client struct {
 
 func NewClient(opts ...option.RequestOption) *Client {
 	options := core.NewRequestOptions(opts...)
-	if options.KeyId == "" {
-		options.KeyId = os.Getenv("PARTITE_API_KEY_ID")
+	if options.KeyID == "" {
+		options.KeyID = os.Getenv("PARTITE_API_KEY_ID")
 	}
 	if options.KeySecret == "" {
 		options.KeySecret = os.Getenv("PARTITE_API_KEY_SECRET")
 	}
 	return &Client{
-		Conversations: conversations.NewClient(options),
-		options:       options,
-		baseURL:       options.BaseURL,
+		Conversations:        conversations.NewClient(options),
+		NotificationChannels: notificationchannels.NewClient(options),
+		options:              options,
+		baseURL:              options.BaseURL,
 		caller: internal.NewCaller(
 			&internal.CallerParams{
-				Client:      options.HTTPClient,
-				MaxAttempts: options.MaxAttempts,
+				Client:         options.HTTPClient,
+				MaxAttempts:    options.MaxAttempts,
+				DisableRetries: options.DisableRetries,
 			},
 		),
 	}

@@ -31,7 +31,14 @@ func (b *BadRequestError) Unwrap() error {
 	return b.APIError
 }
 
-// Request encountered an error and does not have a valid response.
+func (b *BadRequestError) GetBody() *BadRequestErrorResponse {
+	if b == nil {
+		return nil
+	}
+	return b.Body
+}
+
+// A resource with the same unique identifier already exists.
 type ConflictError struct {
 	*core.APIError
 	Body *GenericErrorResponse
@@ -53,6 +60,13 @@ func (c *ConflictError) MarshalJSON() ([]byte, error) {
 
 func (c *ConflictError) Unwrap() error {
 	return c.APIError
+}
+
+func (c *ConflictError) GetBody() *GenericErrorResponse {
+	if c == nil {
+		return nil
+	}
+	return c.Body
 }
 
 // An unexpected error occurred on the server.
@@ -79,6 +93,13 @@ func (i *InternalServerError) Unwrap() error {
 	return i.APIError
 }
 
+func (i *InternalServerError) GetBody() *GenericErrorResponse {
+	if i == nil {
+		return nil
+	}
+	return i.Body
+}
+
 // The specified resource was not found.
 type NotFoundError struct {
 	*core.APIError
@@ -101,4 +122,11 @@ func (n *NotFoundError) MarshalJSON() ([]byte, error) {
 
 func (n *NotFoundError) Unwrap() error {
 	return n.APIError
+}
+
+func (n *NotFoundError) GetBody() *GenericErrorResponse {
+	if n == nil {
+		return nil
+	}
+	return n.Body
 }

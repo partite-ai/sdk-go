@@ -18,14 +18,18 @@ type RequestOption interface {
 // This type is primarily used by the generated code and is not meant
 // to be used directly; use the option package instead.
 type RequestOptions struct {
-	BaseURL         string
-	HTTPClient      HTTPClient
-	HTTPHeader      http.Header
-	BodyProperties  map[string]interface{}
-	QueryParameters url.Values
-	MaxAttempts     uint
-	KeyId           string
-	KeySecret       string
+	BaseURL                    string
+	HTTPClient                 HTTPClient
+	HTTPHeader                 http.Header
+	BodyProperties             map[string]interface{}
+	QueryParameters            url.Values
+	MaxAttempts                uint
+	MaxBufSize                 int
+	MaxStreamReconnectAttempts uint
+	DisableStreamReconnection  bool
+	DisableRetries             bool
+	KeyID                      string
+	KeySecret                  string
 }
 
 // NewRequestOptions returns a new *RequestOptions value.
@@ -48,8 +52,8 @@ func NewRequestOptions(opts ...RequestOption) *RequestOptions {
 // for the request(s).
 func (r *RequestOptions) ToHeader() http.Header {
 	header := r.cloneHeader()
-	if r.KeyId != "" && r.KeySecret != "" {
-		header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(r.KeyId+": "+r.KeySecret)))
+	if r.KeyID != "" || r.KeySecret != "" {
+		header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(r.KeyID+":"+r.KeySecret)))
 	}
 	return header
 }
@@ -58,7 +62,7 @@ func (r *RequestOptions) cloneHeader() http.Header {
 	headers := r.HTTPHeader.Clone()
 	headers.Set("X-Fern-Language", "Go")
 	headers.Set("X-Fern-SDK-Name", "github.com/partite-ai/sdk-go")
-	headers.Set("X-Fern-SDK-Version", "1.0.0-beta1")
+	headers.Set("X-Fern-SDK-Version", "v1.0.0-beta2")
 	return headers
 }
 
@@ -116,13 +120,45 @@ func (m *MaxAttemptsOption) applyRequestOptions(opts *RequestOptions) {
 	opts.MaxAttempts = m.MaxAttempts
 }
 
+// MaxBufSizeOption implements the RequestOption interface.
+type MaxBufSizeOption struct {
+	MaxBufSize int
+}
+
+func (m *MaxBufSizeOption) applyRequestOptions(opts *RequestOptions) {
+	opts.MaxBufSize = m.MaxBufSize
+}
+
+// MaxStreamReconnectAttemptsOption implements the RequestOption interface.
+type MaxStreamReconnectAttemptsOption struct {
+	MaxStreamReconnectAttempts uint
+}
+
+func (m *MaxStreamReconnectAttemptsOption) applyRequestOptions(opts *RequestOptions) {
+	opts.MaxStreamReconnectAttempts = m.MaxStreamReconnectAttempts
+}
+
+// WithoutStreamReconnectionOption implements the RequestOption interface.
+type WithoutStreamReconnectionOption struct{}
+
+func (w *WithoutStreamReconnectionOption) applyRequestOptions(opts *RequestOptions) {
+	opts.DisableStreamReconnection = true
+}
+
+// WithoutRetriesOption implements the RequestOption interface.
+type WithoutRetriesOption struct{}
+
+func (w *WithoutRetriesOption) applyRequestOptions(opts *RequestOptions) {
+	opts.DisableRetries = true
+}
+
 // BasicAuthOption implements the RequestOption interface.
 type BasicAuthOption struct {
-	KeyId     string
+	KeyID     string
 	KeySecret string
 }
 
 func (b *BasicAuthOption) applyRequestOptions(opts *RequestOptions) {
-	opts.KeyId = b.KeyId
+	opts.KeyID = b.KeyID
 	opts.KeySecret = b.KeySecret
 }

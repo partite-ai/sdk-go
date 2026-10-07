@@ -1,6 +1,6 @@
 # Reference
 ## Conversations
-<details><summary><code>client.Conversations.CreateEmptyConversation() -> *partiteai.CreateConversationResponse</code></summary>
+<details><summary><code>client.Conversations.CreateEmptyConversation(request) -> *partiteai.CreateConversationResponse</code></summary>
 <dl>
 <dd>
 
@@ -28,19 +28,12 @@ Creates a new conversation, without specifying an initial request or assets. If 
 
 ```go
 request := &partiteai.CreateEmptyConversationRequest{
-        MeshId: "mesh_id",
-        VersionOrdinal: partiteai.Int(
-            1,
-        ),
-        VersionLabel: partiteai.String(
-            "version_label",
-        ),
-    }
-client.Conversations.CreateEmptyConversation(
-        context.TODO(),
-        request,
-    )
+    MeshID: "mesh_id",
 }
+client.Conversations.CreateEmptyConversation(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -55,7 +48,7 @@ client.Conversations.CreateEmptyConversation(
 <dl>
 <dd>
 
-**meshId:** `string` — The ID of the Mesh for which to create a conversation
+**meshID:** `string` — The ID of the Mesh for which to create a conversation
     
 </dd>
 </dl>
@@ -72,6 +65,38 @@ client.Conversations.CreateEmptyConversation(
 <dd>
 
 **versionLabel:** `*string` — The version label of a mesh version for which to create the conversation
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**tags:** `[]*partiteai.Tag` — Tags to apply to the conversation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**externalID:** `*string` — Optional client-chosen external ID for the new conversation: 1 to 255 bytes. Immutable and unique (per organization). Use `GET /conversations/lookup/external-id/{external_id}` to find the conversation again.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**notificationChannel:** `*string` — Optional notification channel for the new conversation: 1 to 255 bytes. Every request output the conversation writes is also appended to this channel, readable via `GET /notification-channels/{notification_channel_id}/events`. The channel is created implicitly on first use and cannot be changed later.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**tracingEnabled:** `*bool` — Optional. `false` turns off tracing for the new conversation, so the mesh records no trace for any of its requests. Defaults to `true`. Cannot be changed later.
     
 </dd>
 </dl>
@@ -111,19 +136,12 @@ Retrieves the list of intents defined on a particular mesh version for which a n
 
 ```go
 request := &partiteai.GetIntentsForNewConversationRequest{
-        MeshId: "mesh_id",
-        VersionOrdinal: partiteai.Int(
-            1,
-        ),
-        VersionLabel: partiteai.String(
-            "version_label",
-        ),
-    }
-client.Conversations.GetIntentsForNewConversation(
-        context.TODO(),
-        request,
-    )
+    MeshID: "mesh_id",
 }
+client.Conversations.GetIntentsForNewConversation(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -138,7 +156,7 @@ client.Conversations.GetIntentsForNewConversation(
 <dl>
 <dd>
 
-**meshId:** `string` — The ID of the Mesh for which to get intents
+**meshID:** `string` — The ID of the Mesh for which to get intents
     
 </dd>
 </dl>
@@ -194,24 +212,16 @@ Creates a new conversation, specifying an initial request and attachments to sta
 
 ```go
 request := &partiteai.CreateConversationWithInitialRequestRequest{
-        MeshId: "mesh_id",
-        VersionOrdinal: partiteai.Int(
-            1,
-        ),
-        VersionLabel: partiteai.String(
-            "version_label",
-        ),
-        InputMessage: map[string]any{
-            "key": "value",
-        },
-    }
-client.Conversations.CreateConversationWithInitialRequest(
-        context.TODO(),
-        "intent_name",
-        nil,
-        request,
-    )
+    IntentName: "intent_name",
+    MeshID: "mesh_id",
+    InputMessage: map[string]any{
+        "key": "value",
+    },
 }
+client.Conversations.CreateConversationWithInitialRequest(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -234,7 +244,7 @@ client.Conversations.CreateConversationWithInitialRequest(
 <dl>
 <dd>
 
-**meshId:** `string` — The ID of the Mesh for which to create a conversation
+**meshID:** `string` — The ID of the Mesh for which to create a conversation
     
 </dd>
 </dl>
@@ -262,7 +272,67 @@ client.Conversations.CreateConversationWithInitialRequest(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetIntentsForConversation(ConversationId) -> *partiteai.ListIntentsResponse</code></summary>
+<details><summary><code>client.Conversations.GetConversation(ConversationID) -> *partiteai.Conversation</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the conversation.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.GetConversationRequest{
+    ConversationID: "conversation_id",
+}
+client.Conversations.GetConversation(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**conversationID:** `string` — The ID of an existing conversation
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.Conversations.GetIntentsForConversation(ConversationID) -> *partiteai.ListIntentsResponse</code></summary>
 <dl>
 <dd>
 
@@ -289,11 +359,13 @@ Retrieves the list of intents associated with a particular conversation.
 <dd>
 
 ```go
-client.Conversations.GetIntentsForConversation(
-        context.TODO(),
-        "conversation_id",
-    )
+request := &partiteai.GetIntentsForConversationRequest{
+    ConversationID: "conversation_id",
 }
+client.Conversations.GetIntentsForConversation(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -308,7 +380,7 @@ client.Conversations.GetIntentsForConversation(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -320,7 +392,7 @@ client.Conversations.GetIntentsForConversation(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CreateConversationRequest(ConversationId, IntentName, request) -> *partiteai.CreateRequestResponse</code></summary>
+<details><summary><code>client.Conversations.CreateConversationRequest(ConversationID, IntentName, request) -> *partiteai.CreateRequestResponse</code></summary>
 <dl>
 <dd>
 
@@ -348,18 +420,16 @@ Adds a request specified in JSON to an existing conversation.
 
 ```go
 request := &partiteai.CreateConversationRequestRequest{
-        InputMessage: map[string]any{
-            "key": "value",
-        },
-    }
-client.Conversations.CreateConversationRequest(
-        context.TODO(),
-        "conversation_id",
-        "intent_name",
-        nil,
-        request,
-    )
+    ConversationID: "conversation_id",
+    IntentName: "intent_name",
+    InputMessage: map[string]any{
+        "key": "value",
+    },
 }
+client.Conversations.CreateConversationRequest(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -374,7 +444,7 @@ client.Conversations.CreateConversationRequest(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -394,7 +464,7 @@ client.Conversations.CreateConversationRequest(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetConversationRequests(ConversationId) -> *partiteai.GetConversationRequestsResponse</code></summary>
+<details><summary><code>client.Conversations.GetConversationRequests(ConversationID) -> *partiteai.GetConversationRequestsResponse</code></summary>
 <dl>
 <dd>
 
@@ -421,11 +491,13 @@ Retrieves a list of requests that have been made within a particular conversatio
 <dd>
 
 ```go
-client.Conversations.GetConversationRequests(
-        context.TODO(),
-        "conversation_id",
-    )
+request := &partiteai.GetConversationRequestsRequest{
+    ConversationID: "conversation_id",
 }
+client.Conversations.GetConversationRequests(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -440,7 +512,7 @@ client.Conversations.GetConversationRequests(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -452,7 +524,7 @@ client.Conversations.GetConversationRequests(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CancelRequest(ConversationId, RequestId) -> error</code></summary>
+<details><summary><code>client.Conversations.CancelRequest(ConversationID, RequestID) -> error</code></summary>
 <dl>
 <dd>
 
@@ -479,12 +551,14 @@ Cancels execution of a previously submitted request. Processing will be stopped 
 <dd>
 
 ```go
-client.Conversations.CancelRequest(
-        context.TODO(),
-        "conversation_id",
-        "request_id",
-    )
+request := &partiteai.CancelRequestRequest{
+    ConversationID: "conversation_id",
+    RequestID: "request_id",
 }
+client.Conversations.CancelRequest(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -499,7 +573,7 @@ client.Conversations.CancelRequest(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -507,7 +581,7 @@ client.Conversations.CancelRequest(
 <dl>
 <dd>
 
-**requestId:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of an existing request
     
 </dd>
 </dl>
@@ -519,7 +593,7 @@ client.Conversations.CancelRequest(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CompleteTask(ConversationId, RequestId, TaskId, request) -> error</code></summary>
+<details><summary><code>client.Conversations.CompleteTask(ConversationID, RequestID, TaskID, request) -> error</code></summary>
 <dl>
 <dd>
 
@@ -547,18 +621,17 @@ Used to submit the results of a task event that previously appeared as an output
 
 ```go
 request := &partiteai.CompleteTaskRequest{
-        Body: map[string]any{
-            "key": "value",
-        },
-    }
-client.Conversations.CompleteTask(
-        context.TODO(),
-        "conversation_id",
-        "request_id",
-        "task_id",
-        request,
-    )
+    ConversationID: "conversation_id",
+    RequestID: "request_id",
+    TaskID: "task_id",
+    Body: map[string]any{
+        "key": "value",
+    },
 }
+client.Conversations.CompleteTask(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -573,7 +646,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -581,7 +654,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**requestId:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of an existing request
     
 </dd>
 </dl>
@@ -589,7 +662,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**taskId:** `string` — The ID of the task to complete
+**taskID:** `string` — The ID of the task to complete
     
 </dd>
 </dl>
@@ -597,7 +670,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**request:** `any` 
+**request:** `map[string]any` — An object conforming to the task's `output_schema`.
     
 </dd>
 </dl>
@@ -609,7 +682,7 @@ client.Conversations.CompleteTask(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestEvents(ConversationId, RequestId) -> partiteai.ResponseEventData</code></summary>
+<details><summary><code>client.Conversations.GetRequestEvents(ConversationID, RequestID) -> partiteai.ResponseEventData</code></summary>
 <dl>
 <dd>
 
@@ -637,17 +710,13 @@ Gets the results of a request, as a stream of events. This allows for real-time 
 
 ```go
 request := &partiteai.GetRequestEventsRequest{
-        LastEventId: partiteai.String(
-            "Last-Event-ID",
-        ),
-    }
-client.Conversations.GetRequestEvents(
-        context.TODO(),
-        "conversation_id",
-        "request_id",
-        request,
-    )
+    ConversationID: "conversation_id",
+    RequestID: "request_id",
 }
+client.Conversations.GetRequestEvents(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -662,7 +731,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -670,7 +739,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**requestId:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of an existing request
     
 </dd>
 </dl>
@@ -678,7 +747,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**lastEventId:** `*string` — The ID of the last event received. If provided, the stream will start from the next event after this ID.
+**lastEventID:** `*string` — The ID of the last event received. If provided, the stream will start from the next event after this ID.
     
 </dd>
 </dl>
@@ -690,7 +759,7 @@ client.Conversations.GetRequestEvents(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestResponse(ConversationId, RequestId) -> map[string]any</code></summary>
+<details><summary><code>client.Conversations.GetRequestResponse(ConversationID, RequestID) -> map[string]any</code></summary>
 <dl>
 <dd>
 
@@ -717,12 +786,14 @@ Gets the final response of a request. This will block until the request is compl
 <dd>
 
 ```go
-client.Conversations.GetRequestResponse(
-        context.TODO(),
-        "conversation_id",
-        "request_id",
-    )
+request := &partiteai.GetRequestResponseRequest{
+    ConversationID: "conversation_id",
+    RequestID: "request_id",
 }
+client.Conversations.GetRequestResponse(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -737,7 +808,7 @@ client.Conversations.GetRequestResponse(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -745,7 +816,7 @@ client.Conversations.GetRequestResponse(
 <dl>
 <dd>
 
-**requestId:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of an existing request
     
 </dd>
 </dl>
@@ -757,7 +828,7 @@ client.Conversations.GetRequestResponse(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestTask(ConversationId, RequestId) -> *partiteai.GetTaskResponse</code></summary>
+<details><summary><code>client.Conversations.GetRequestTask(ConversationID, RequestID) -> *partiteai.GetTaskResponse</code></summary>
 <dl>
 <dd>
 
@@ -784,12 +855,14 @@ If the request is currently waiting for a task to be completed, this endpoint wi
 <dd>
 
 ```go
-client.Conversations.GetRequestTask(
-        context.TODO(),
-        "conversation_id",
-        "request_id",
-    )
+request := &partiteai.GetRequestTaskRequest{
+    ConversationID: "conversation_id",
+    RequestID: "request_id",
 }
+client.Conversations.GetRequestTask(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -804,7 +877,7 @@ client.Conversations.GetRequestTask(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -812,7 +885,7 @@ client.Conversations.GetRequestTask(
 <dl>
 <dd>
 
-**requestId:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of an existing request
     
 </dd>
 </dl>
@@ -824,7 +897,7 @@ client.Conversations.GetRequestTask(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.AttachAssetsToConversation(ConversationId, request) -> *partiteai.AttachAssetsToConversationResponse</code></summary>
+<details><summary><code>client.Conversations.AttachAssetsToConversation(ConversationID, request) -> *partiteai.AttachAssetsToConversationResponse</code></summary>
 <dl>
 <dd>
 
@@ -851,12 +924,13 @@ Adds assets to an existing conversation.
 <dd>
 
 ```go
-client.Conversations.AttachAssetsToConversation(
-        context.TODO(),
-        "conversation_id",
-        nil,
-    )
+request := &partiteai.AttachAssetsToConversationRequest{
+    ConversationID: "conversation_id",
 }
+client.Conversations.AttachAssetsToConversation(
+    context.TODO(),
+    request,
+)
 ```
 </dd>
 </dl>
@@ -871,7 +945,7 @@ client.Conversations.AttachAssetsToConversation(
 <dl>
 <dd>
 
-**conversationId:** `string` — The ID of an existing conversation
+**conversationID:** `string` — The ID of an existing conversation
     
 </dd>
 </dl>
@@ -882,3 +956,187 @@ client.Conversations.AttachAssetsToConversation(
 </dd>
 </dl>
 </details>
+
+<details><summary><code>client.Conversations.GetConversationByExternalID(ExternalID) -> *partiteai.Conversation</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the conversation that was created with the given `external_id`.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.GetConversationByExternalIDRequest{
+    ExternalID: "external_id",
+}
+client.Conversations.GetConversationByExternalID(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**externalID:** `string` — The external ID supplied when the conversation was created.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## Notification Channels
+<details><summary><code>client.NotificationChannels.GetNotificationChannelEvents(NotificationChannelID) -> *partiteai.NotificationChannelEventList</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The request Content-Type selects the mode: `text/event-stream` (default) streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.GetNotificationChannelEventsRequest{
+    NotificationChannelID: "notification_channel_id",
+}
+client.NotificationChannels.GetNotificationChannelEvents(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**notificationChannelID:** `string` — The notification channel id supplied at conversation creation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `*int` — Maximum number of events to return. `application/json` mode only; default 100, maximum 1000.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**lastEventID:** `*string` — An event id (`rnco_…`) from a previous event on this channel. If provided, reading starts after that event. Event ids are ordered and unique per channel, not globally; an id is only meaningful for the channel it came from.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.NotificationChannels.CreateNotificationChannel(NotificationChannelID) -> *partiteai.NotificationChannelCreated</code></summary>
+<dl>
+<dd>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.CreateNotificationChannelRequest{
+    NotificationChannelID: "notification_channel_id",
+}
+client.NotificationChannels.CreateNotificationChannel(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**notificationChannelID:** `string` — The client-supplied id of the channel to create.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+

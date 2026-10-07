@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// RFC3339Milli is a time format string for RFC 3339 with millisecond precision.
+// Go's time.RFC3339 omits fractional seconds and time.RFC3339Nano trims trailing
+// zeros, so neither produces the fixed ".000" millisecond suffix that many APIs expect.
+const RFC3339Milli = "2006-01-02T15:04:05.000Z07:00"
+
 var (
 	bytesType        = reflect.TypeOf([]byte{})
 	queryEncoderType = reflect.TypeOf(new(QueryEncoder)).Elem()
@@ -62,6 +67,11 @@ func QueryValues(v interface{}) (url.Values, error) {
 	return values, err
 }
 
+// applyQueryDefaultsOnNilRequest reports whether query parameter defaults are applied when the
+// request is nil. It is enabled by the applyQueryDefaultsOnNilRequest generator option, which
+// emits an init function that sets it to true.
+var applyQueryDefaultsOnNilRequest = false
+
 // QueryValuesWithDefaults encodes url.Values from request objects
 // and default values, merging the defaults into the request.
 // It's expected that the values of defaults are wire names.
@@ -69,6 +79,15 @@ func QueryValuesWithDefaults(v interface{}, defaults map[string]interface{}) (ur
 	val, values, err := prepareValue(v)
 	if err != nil {
 		return values, err
+	}
+	if !val.IsValid() {
+		if applyQueryDefaultsOnNilRequest {
+			// A nil request carries no explicit values, so every default applies.
+			for wireName, defaultVal := range defaults {
+				values.Set(wireName, valueString(reflect.ValueOf(defaultVal), tagOptions{}, reflect.StructField{}))
+			}
+		}
+		return values, nil
 	}
 
 	// apply defaults to zero-value fields directly on the original struct
@@ -274,7 +293,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		if format := sf.Tag.Get("format"); format == "date" {
 			return t.Format("2006-01-02")
 		}
-		return t.Format(time.RFC3339)
+		return t.Format(RFC3339Milli)
 	}
 
 	if v.Type() == uuidType {

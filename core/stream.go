@@ -3,13 +3,15 @@ package core
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"slices"
-	"strings"
+	"strconv"
+	"sync"
+	"time"
 )
 
 type StreamFormat string
@@ -20,17 +22,55 @@ const (
 )
 
 const (
-	defaultMaxBufSize = 64 * 1024 // 64KB
+	// defaultDelimiter is the fallback delimiter for ScannerStreamReader
+	// when no custom delimiter is configured via WithDelimiter.
+	defaultDelimiter = "\n"
+
+	// sseDataJoin is the separator used when concatenating multi-line SSE
+	// data: fields. Per the WHATWG spec, this is always U+000A regardless
+	// of the stream's line endings.
+	sseDataJoin = "\n"
 )
 
-// defaultStreamDelimiter is the default stream delimiter used to split messages.
-const defaultStreamDelimiter = '\n'
+const (
+	defaultMaxBufSize  = 1024 * 1024 // 1MB
+	defaultInitBufSize = 4096        // Initial buffer allocation; grows as needed up to maxBufSize.
+
+	// Caps consecutive reconnects without progress. The counter resets each
+	// time an event is successfully dispatched, so the limit bounds retries
+	// between useful responses, not the total over the stream's lifetime.
+	// The defaultReconnectDelay bounds the retry rate.
+	defaultMaxStreamReconnectAttempts = 5
+
+	// defaultReconnectDelay is the minimum wait between reconnects when the
+	// server has not sent a `retry:` directive.
+	defaultReconnectDelay = time.Second
+
+	// Upper bound on server-sent `retry:` directives. Without this, a server
+	// advertising a multi-day reconnection interval could stall the client.
+	maxReconnectBackoff = 30 * time.Second
+)
 
 // Stream represents a stream of messages sent from a server.
+//
+// Stream is not safe for concurrent use by multiple goroutines. Cancel the
+// context passed to NewStream to tear the stream down.
 type Stream[T any] struct {
-	reader streamReader
-	closer io.Closer
+	ctx               context.Context
+	reader            streamReader
+	sseReader         sseEventReader // non-nil iff reader is an sseEventReader; cached at construction
+	closer            *onceCloser
+	stopFunc          func() bool
+	options           *streamOptions
+	lastEventID       string // snapshot of sseReader.LastEventID() taken just before each reconnect; survives the reader swap
+	lastRetryMs       int    // snapshot of sseReader.LastRetryMs() taken just before each reconnect; survives the reader swap
+	reconnectAttempts uint
 }
+
+// ReconnectFunc is invoked when the underlying SSE response body reaches EOF
+// before the configured terminator is observed and reconnection is enabled.
+// It must return a fresh *http.Response with the same SSE semantics.
+type ReconnectFunc func(ctx context.Context, lastEventID string) (*http.Response, error)
 
 // StreamOption adapts the behavior of the Stream.
 type StreamOption func(*streamOptions)
@@ -71,23 +111,96 @@ func WithFormat(format StreamFormat) StreamOption {
 	}
 }
 
+// WithEventDiscriminator configures the SSE stream reader to inject the
+// SSE event field value as a JSON discriminator into the data payload.
+// This is used for protocol-level discrimination where the union discriminant
+// comes from the SSE event: field rather than from within the JSON data.
+func WithEventDiscriminator(field string) StreamOption {
+	return func(opts *streamOptions) {
+		opts.eventDiscriminator = field
+	}
+}
+
+// WithMaxBufSize overrides the maximum buffer size for the Stream.
+//
+// This controls the maximum size of a single message (in bytes) that the
+// stream can process. By default, this is set to 1MB. If your streaming
+// responses contain messages larger than the default, increase this value.
+func WithMaxBufSize(size int) StreamOption {
+	return func(opts *streamOptions) {
+		if size > 0 {
+			opts.maxBufSize = size
+		}
+	}
+}
+
+// WithReconnect enables transparent mid-stream reconnection for SSE streams.
+// fn is invoked on premature io.EOF (before the configured terminator) with
+// the most recent SSE event ID; the returned *http.Response continues the
+// iteration. maxAttempts caps reconnects; 0 falls back to the package default.
+// No effect on non-SSE streams.
+func WithReconnect(fn ReconnectFunc, maxAttempts uint) StreamOption {
+	return func(opts *streamOptions) {
+		opts.reconnectFn = fn
+		opts.reconnectMax = maxAttempts
+	}
+}
+
+// SseEventMeta holds SSE metadata fields shared by StreamEvent and StreamEventRaw.
+type SseEventMeta struct {
+	ID    string
+	Event string
+	// Retry is the reconnection time in milliseconds.
+	// Zero if not set or if the value was not a valid integer.
+	Retry int
+}
+
+// StreamEvent contains the parsed data and SSE metadata for a single event.
+type StreamEvent[T any] struct {
+	SseEventMeta
+	Data T
+}
+
+// StreamEventRaw contains the raw bytes and SSE metadata for a single event.
+type StreamEventRaw struct {
+	SseEventMeta
+	Data []byte
+}
+
 // NewStream constructs a new Stream from the given *http.Response.
-func NewStream[T any](response *http.Response, opts ...StreamOption) *Stream[T] {
+func NewStream[T any](ctx context.Context, response *http.Response, opts ...StreamOption) *Stream[T] {
 	options := new(streamOptions)
 	for _, opt := range opts {
 		opt(options)
 	}
-	return &Stream[T]{
-		reader: newStreamReader(response.Body, options),
-		closer: response.Body,
+	if options.reconnectFn != nil && options.reconnectMax == 0 {
+		options.reconnectMax = defaultMaxStreamReconnectAttempts
 	}
+	closer := newOnceCloser(response.Body)
+	stop := context.AfterFunc(ctx, func() {
+		_ = closer.Close()
+	})
+	reader := newStreamReader(response.Body, options)
+	sseReader, _ := reader.(sseEventReader)
+	return &Stream[T]{
+		ctx:       ctx,
+		reader:    reader,
+		sseReader: sseReader,
+		closer:    closer,
+		stopFunc:  stop,
+		options:   options,
+	}
+}
+
+func (s *Stream[T]) readBytes() ([]byte, error) {
+	return s.reader.ReadFromStream()
 }
 
 // Recv reads a message from the stream, returning io.EOF when
 // all the messages have been read.
-func (s Stream[T]) Recv() (T, error) {
+func (s *Stream[T]) Recv() (T, error) {
 	var value T
-	bytes, err := s.reader.ReadFromStream()
+	bytes, err := readWithReconnect(s, s.readBytes)
 	if err != nil {
 		return value, err
 	}
@@ -97,14 +210,232 @@ func (s Stream[T]) Recv() (T, error) {
 	return value, nil
 }
 
+// RecvRaw reads a raw message from the stream without JSON unmarshaling,
+// returning io.EOF when all the messages have been read.
+func (s *Stream[T]) RecvRaw() ([]byte, error) {
+	return readWithReconnect(s, s.readBytes)
+}
+
+// readWithReconnect drives a per-event read against the underlying reader,
+// transparently reconnecting on premature io.EOF when WithReconnect is
+// configured and the terminator has not yet been observed.
+func readWithReconnect[V any, T any](s *Stream[T], read func() (V, error)) (V, error) {
+	if s.options.reconnectFn == nil {
+		return read()
+	}
+	for {
+		v, err := read()
+		if err == nil {
+			s.reconnectAttempts = 0
+			return v, err
+		}
+		if !s.shouldReconnectOnError(err) {
+			return v, err
+		}
+		if rerr := s.reconnect(); rerr != nil {
+			return v, rerr
+		}
+	}
+}
+
 // Close closes the Stream.
-func (s Stream[T]) Close() error {
+func (s *Stream[T]) Close() error {
+	if s.stopFunc != nil {
+		s.stopFunc()
+	}
 	return s.closer.Close()
+}
+
+// recvSseEvent reads the next SSE event with metadata, falling back to
+// ReadFromStream for non-SSE readers.
+func (s *Stream[T]) recvSseEvent() (*SseEvent, error) {
+	return readWithReconnect(s, func() (*SseEvent, error) {
+		if s.sseReader != nil {
+			return s.sseReader.ReadEvent()
+		}
+		data, err := s.reader.ReadFromStream()
+		if err != nil {
+			return nil, err
+		}
+		return &SseEvent{Data: data}, nil
+	})
+}
+
+// RecvEvent reads the next event from the stream, including SSE metadata
+// (id, event type, retry). Returns io.EOF when all events have been read.
+//
+// This is only meaningful for SSE streams. For non-SSE streams, the
+// metadata fields will always be zero-valued.
+func (s *Stream[T]) RecvEvent() (StreamEvent[T], error) {
+	var result StreamEvent[T]
+	event, err := s.recvSseEvent()
+	if err != nil {
+		return result, err
+	}
+	if err := json.Unmarshal(event.Data, &result.Data); err != nil {
+		return result, err
+	}
+	result.SseEventMeta = event.SseEventMeta
+	return result, nil
+}
+
+// RecvEventRaw reads the next event from the stream without JSON unmarshaling,
+// including SSE metadata. Returns io.EOF when all events have been read.
+func (s *Stream[T]) RecvEventRaw() (StreamEventRaw, error) {
+	var result StreamEventRaw
+	event, err := s.recvSseEvent()
+	if err != nil {
+		return result, err
+	}
+	result.Data = event.Data
+	result.SseEventMeta = event.SseEventMeta
+	return result, nil
+}
+
+// LastEventID returns the most recently received event ID. Per the SSE spec,
+// the last event ID persists across events (until explicitly reset by an
+// `id:` line with an empty value) and should be sent as the Last-Event-ID
+// header when reconnecting.
+//
+// When WithReconnect is configured, the value persists across reconnects:
+// each new reader starts with no ID, so callers see the pre-reconnect
+// snapshot until the resumed stream emits an `id:` field of its own.
+func (s *Stream[T]) LastEventID() string {
+	if s.sseReader != nil {
+		if id := s.sseReader.LastEventID(); id != "" {
+			return id
+		}
+	}
+	return s.lastEventID
+}
+
+// LastRetryMs returns the most recently advertised SSE `retry:` reconnection
+// time in milliseconds, or 0 if the server has not sent one. Per the SSE spec
+// the value is sticky: a `retry:` directive — even one sent in its own frame
+// with no `data:` — remains in effect for subsequent events until the server
+// sends a new one, so the per-event StreamEvent.Retry can be 0 while this
+// returns the advertised interval. The runtime already honors this value when
+// gating reconnect backoff; this accessor exposes it so callers can observe
+// it, mirroring LastEventID.
+//
+// When WithReconnect is configured, the value persists across reconnects: each
+// new reader starts with no retry directive, so callers see the pre-reconnect
+// snapshot until the resumed stream advertises a `retry:` of its own.
+func (s *Stream[T]) LastRetryMs() int {
+	if s.sseReader != nil {
+		if ms := s.sseReader.LastRetryMs(); ms > 0 {
+			return ms
+		}
+	}
+	return s.lastRetryMs
+}
+
+// shouldReconnectOnError reports whether the given error from the underlying
+// reader should trigger a reconnect attempt.
+func (s *Stream[T]) shouldReconnectOnError(err error) bool {
+	if s.ctx.Err() != nil {
+		return false
+	}
+	if s.options.format != StreamFormatSSE {
+		return false
+	}
+	if s.reconnectAttempts >= s.options.reconnectMax {
+		return false
+	}
+	if err != io.EOF {
+		return false
+	}
+	if s.sseReader != nil && s.sseReader.TerminatorSeen() {
+		return false
+	}
+	// No terminator configured — cannot distinguish clean EOF from drop.
+	if s.options.terminator == "" {
+		return false
+	}
+	// No event ID ever dispatched — reconnecting with an empty
+	// Last-Event-ID would replay the entire stream.
+	if s.LastEventID() == "" {
+		return false
+	}
+	return true
+}
+
+// reconnect re-issues the request via ReconnectFunc and swaps the underlying
+// reader. The lastEventID snapshot only updates on non-empty values so the
+// carried ID survives across reconnects whose resumed reader hasn't yet
+// emitted an `id:`. A delay (server-sent `retry:` or the default minimum) is
+// applied before re-issuing, clamped to maxReconnectBackoff.
+func (s *Stream[T]) reconnect() error {
+	if s.sseReader != nil {
+		if id := s.sseReader.LastEventID(); id != "" {
+			s.lastEventID = id
+		}
+		if ms := s.sseReader.LastRetryMs(); ms > 0 {
+			s.lastRetryMs = ms
+		}
+	}
+
+	// Apply backoff: use the server-sent retry directive if available,
+	// otherwise fall back to the default minimum delay.
+	delay := defaultReconnectDelay
+	if s.lastRetryMs > 0 {
+		delay = time.Duration(s.lastRetryMs) * time.Millisecond
+	}
+	if delay > maxReconnectBackoff {
+		delay = maxReconnectBackoff
+	}
+	timer := time.NewTimer(delay)
+	select {
+	case <-timer.C:
+	case <-s.ctx.Done():
+		timer.Stop()
+		return s.ctx.Err()
+	}
+
+	s.reconnectAttempts++
+
+	resp, err := s.options.reconnectFn(s.ctx, s.lastEventID)
+	if err != nil || resp == nil || resp.Body == nil {
+		// Install a reader that immediately yields EOF so the outer loop
+		// re-evaluates shouldReconnectOnError (subject to the attempt cap).
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		s.reader = &eofReader{}
+		s.sseReader = nil
+		return nil
+	}
+
+	// Stop the previous AfterFunc and swap closers atomically from the
+	// stream's perspective. Each AfterFunc captures its specific closer in
+	// its closure, so a stale AfterFunc firing concurrently with reconnect
+	// can only close its own (old) body, never the freshly-issued one.
+	if s.stopFunc != nil {
+		s.stopFunc()
+	}
+	_ = s.closer.Close()
+	newCloser := newOnceCloser(resp.Body)
+	s.closer = newCloser
+	s.stopFunc = context.AfterFunc(s.ctx, func() {
+		_ = newCloser.Close()
+	})
+	s.reader = newStreamReader(resp.Body, s.options)
+	s.sseReader, _ = s.reader.(sseEventReader)
+	return nil
 }
 
 // streamReader reads data from a stream.
 type streamReader interface {
 	ReadFromStream() ([]byte, error)
+}
+
+// sseEventReader extends streamReader with SSE event metadata.
+type sseEventReader interface {
+	streamReader
+	ReadEvent() (*SseEvent, error)
+	LastEventID() string
+	LastRetryMs() int
+	TerminatorSeen() bool
 }
 
 // newStreamReader returns a new streamReader based on the given
@@ -118,8 +449,8 @@ func newStreamReader(reader io.Reader, options *streamOptions) streamReader {
 		if options.maxBufSize == 0 {
 			options.maxBufSize = defaultMaxBufSize
 		}
-		if options.delimiter == "" {
-			options.delimiter = string(defaultStreamDelimiter)
+		if options.terminator != "" {
+			options.terminatorBytes = []byte(options.terminator)
 		}
 		if options.format == StreamFormatSSE {
 			return newSseStreamReader(reader, options)
@@ -142,14 +473,20 @@ func newBufferStreamReader(reader io.Reader) *BufferStreamReader {
 }
 
 func (b *BufferStreamReader) ReadFromStream() ([]byte, error) {
-	return b.reader.ReadBytes(defaultStreamDelimiter)
+	line, err := b.reader.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(line, []byte("\n")), nil
 }
 
 // ScannerStreamReader reads data from a *bufio.Scanner, which allows for
 // configurable delimiters.
 type ScannerStreamReader struct {
-	scanner *bufio.Scanner
-	options *streamOptions
+	scanner        *bufio.Scanner
+	options        *streamOptions
+	prefixBytes    []byte
+	delimiterBytes []byte
 }
 
 func newScannerStreamReader(
@@ -157,19 +494,22 @@ func newScannerStreamReader(
 	options *streamOptions,
 ) *ScannerStreamReader {
 	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, min(defaultInitBufSize, options.maxBufSize)), options.maxBufSize)
 	stream := &ScannerStreamReader{
-		scanner: scanner,
-		options: options,
+		scanner:        scanner,
+		options:        options,
+		prefixBytes:    []byte(options.prefix),
+		delimiterBytes: []byte(options.getLineDelimiter()),
 	}
-	scanner.Split(func(bytes []byte, atEOF bool) (int, []byte, error) {
-		if atEOF && len(bytes) == 0 {
+	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
+		if atEOF && len(data) == 0 {
 			return 0, nil, nil
 		}
-		n, data, err := stream.parse(bytes)
-		if stream.isTerminated(data) {
+		n, token, err := stream.parse(data)
+		if stream.options.isTerminated(token) {
 			return 0, nil, io.EOF
 		}
-		return n, data, err
+		return n, token, err
 	})
 	return stream
 }
@@ -184,48 +524,83 @@ func (s *ScannerStreamReader) ReadFromStream() ([]byte, error) {
 	return nil, io.EOF
 }
 
-func (s *ScannerStreamReader) parse(bytes []byte) (int, []byte, error) {
+func (s *ScannerStreamReader) parse(data []byte) (int, []byte, error) {
 	var startIndex int
-	if s.options != nil && s.options.prefix != "" {
-		if i := strings.Index(string(bytes), s.options.prefix); i >= 0 {
-			startIndex = i + len(s.options.prefix)
+	if len(s.prefixBytes) > 0 {
+		if i := bytes.Index(data, s.prefixBytes); i >= 0 {
+			startIndex = i + len(s.prefixBytes)
 		}
 	}
-	data := bytes[startIndex:]
-	delimIndex := strings.Index(string(data), s.options.delimiter)
+	content := data[startIndex:]
+	delimIndex := bytes.Index(content, s.delimiterBytes)
 	if delimIndex < 0 {
-		return startIndex + len(data), data, nil
+		return startIndex + len(content), content, nil
 	}
-	endIndex := delimIndex + len(s.options.delimiter)
-	parsedData := data[:endIndex]
+	endIndex := delimIndex + len(s.delimiterBytes)
+	parsedData := content[:endIndex]
 	n := startIndex + endIndex
 	return n, parsedData, nil
 }
 
-func (s *ScannerStreamReader) isTerminated(bytes []byte) bool {
-	if s.options == nil || s.options.terminator == "" {
-		return false
-	}
-	return strings.Contains(string(bytes), s.options.terminator)
-}
-
 type streamOptions struct {
-	delimiter  string
-	prefix     string
-	terminator string
-	format     StreamFormat
-	maxBufSize int
+	delimiter          string
+	prefix             string
+	terminator         string
+	terminatorBytes    []byte
+	format             StreamFormat
+	maxBufSize         int
+	eventDiscriminator string
+	reconnectFn        ReconnectFunc
+	reconnectMax       uint
 }
 
 func (s *streamOptions) isEmpty() bool {
 	return s.delimiter == "" && s.prefix == "" && s.terminator == "" && s.format == StreamFormatEmpty
 }
 
-// SseStreamReader reads data from a *bufio.Scanner, which allows for
-// configurable delimiters.
+func (s *streamOptions) getLineDelimiter() string {
+	if s.delimiter != "" {
+		return s.delimiter
+	}
+	return defaultDelimiter
+}
+
+func (s *streamOptions) isTerminated(data []byte) bool {
+	return len(s.terminatorBytes) > 0 && bytes.Contains(data, s.terminatorBytes)
+}
+
+// eofReader is a no-op streamReader installed after a failed reconnect so the
+// outer loop can re-evaluate shouldReconnectOnError.
+type eofReader struct{}
+
+func (e *eofReader) ReadFromStream() ([]byte, error) { return nil, io.EOF }
+
+type onceCloser struct {
+	closer io.Closer
+	once   sync.Once
+	err    error
+}
+
+func newOnceCloser(closer io.Closer) *onceCloser {
+	return &onceCloser{closer: closer}
+}
+
+func (o *onceCloser) Close() error {
+	o.once.Do(func() { o.err = o.closer.Close() })
+	return o.err
+}
+
 type SseStreamReader struct {
-	scanner *bufio.Scanner
-	options *streamOptions
+	scanner        *bufio.Scanner
+	options        *streamOptions
+	lastEventID    string
+	lastRetryMs    int
+	terminatorSeen bool
+
+	// Precomputed discriminator injection patterns (empty if no discriminator configured).
+	discriminatorQuotedField []byte // e.g. `"type"`
+	discriminatorKeyCheck    []byte // e.g. `"type":`
+	discriminatorKeyCheckSp  []byte // e.g. `"type" :`
 }
 
 func newSseStreamReader(
@@ -237,92 +612,268 @@ func newSseStreamReader(
 		scanner: scanner,
 		options: options,
 	}
-	scanner.Buffer(make([]byte, slices.Min([]int{4096, options.maxBufSize})), options.maxBufSize)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := strings.Index(string(data), stream.options.delimiter+stream.options.delimiter); i >= 0 {
-			return i + 1, data[0:i], nil
-		}
-
-		if atEOF || stream.isTerminated(data) {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
+	if options.eventDiscriminator != "" {
+		quoted := fmt.Sprintf("%q", options.eventDiscriminator)
+		stream.discriminatorQuotedField = []byte(quoted)
+		stream.discriminatorKeyCheck = []byte(quoted + ":")
+		stream.discriminatorKeyCheckSp = []byte(quoted + " :")
+	}
+	scanner.Buffer(make([]byte, min(defaultInitBufSize, options.maxBufSize)), options.maxBufSize)
+	scanner.Split(scanSSELines)
 	return stream
 }
 
-func (s *SseStreamReader) isTerminated(bytes []byte) bool {
-	if s.options == nil || s.options.terminator == "" {
-		return false
+// scanSSELines splits SSE stream data into individual lines, handling all
+// spec-compliant line endings: LF (\n), CR (\r), and CRLF (\r\n).
+func scanSSELines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
 	}
-	return strings.Contains(string(bytes), s.options.terminator)
-}
-
-func (s *SseStreamReader) ReadFromStream() ([]byte, error) {
-
-	event, err := s.nextEvent()
-	if err != nil {
-		return nil, err
+	for i := 0; i < len(data); i++ {
+		switch data[i] {
+		case '\n':
+			return i + 1, data[:i], nil
+		case '\r':
+			if i+1 < len(data) {
+				if data[i+1] == '\n' {
+					return i + 2, data[:i], nil // CRLF
+				}
+				return i + 1, data[:i], nil // CR only
+			}
+			if atEOF {
+				return len(data), data[:i], nil
+			}
+			// Need more data to distinguish \r from \r\n
+			return 0, nil, nil
+		}
 	}
-	return event.data, nil
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
 
 func (s *SseStreamReader) nextEvent() (*SseEvent, error) {
-
 	event := SseEvent{}
-	if s.scanner.Scan() {
-		rawEvent := s.scanner.Bytes()
-
-		lines := strings.Split(string(rawEvent), s.options.delimiter)
-		for _, line := range lines {
-			s.parseSseLine([]byte(line), &event)
+	for s.scanner.Scan() {
+		line := s.scanner.Bytes()
+		if len(line) == 0 {
+			// Empty line = event boundary per SSE spec
+			if event.hasID {
+				s.lastEventID = event.ID
+			}
+			if event.size() > s.options.maxBufSize {
+				return nil, errors.New("SseStreamReader.ReadFromStream: buffer limit exceeded")
+			}
+			return &event, nil
 		}
-
-		if event.size() > s.options.maxBufSize {
-			return nil, errors.New("SseStreamReader.ReadFromStream: buffer limit exceeded")
-		}
+		s.parseSseLine(line, &event)
+	}
+	if err := s.scanner.Err(); err != nil {
+		return nil, err
+	}
+	// EOF — only commit the id when dispatching (event has data). An id
+	// parsed from an incomplete event must not be committed; otherwise
+	// reconnection would skip the undispatched event.
+	if event.hasID && len(event.Data) > 0 {
+		s.lastEventID = event.ID
+	}
+	if len(event.Data) > 0 || event.hasID || event.Event != "" {
 		return &event, nil
 	}
-	return &event, io.EOF
+	return nil, io.EOF
 }
 
-func (s *SseStreamReader) parseSseLine(_bytes []byte, event *SseEvent) error {
-	if bytes.HasPrefix(_bytes, sseDataPrefix) {
-		if len(event.data) > 0 {
-			event.data = append(event.data, s.options.delimiter...)
+// ReadEvent reads the next SSE event with full metadata, skipping comment-only events.
+func (s *SseStreamReader) ReadEvent() (*SseEvent, error) {
+	for {
+		event, err := s.nextEvent()
+		if err != nil {
+			return nil, err
 		}
-		event.data = append(event.data, _bytes[len(sseDataPrefix):]...)
-	} else if bytes.HasPrefix(_bytes, sseIdPrefix) {
-		event.id = append(event.id, _bytes[len(sseIdPrefix):]...)
-	} else if bytes.HasPrefix(_bytes, sseEventPrefix) {
-		event.event = append(event.event, _bytes[len(sseEventPrefix):]...)
-	} else if bytes.HasPrefix(_bytes, sseRetryPrefix) {
-		event.retry = append(event.retry, _bytes[len(sseRetryPrefix):]...)
+		if s.options.isTerminated(event.Data) {
+			s.terminatorSeen = true
+			return nil, io.EOF
+		}
+		if len(event.Data) == 0 {
+			continue
+		}
+		if len(s.discriminatorQuotedField) > 0 && event.Event != "" {
+			event.Data = s.injectDiscriminator(event.Data, event.Event)
+		}
+		return event, nil
 	}
-	return nil
+}
+
+func (s *SseStreamReader) ReadFromStream() ([]byte, error) {
+	event, err := s.ReadEvent()
+	if err != nil {
+		return nil, err
+	}
+	return event.Data, nil
+}
+
+// LastEventID returns the most recently received event ID.
+func (s *SseStreamReader) LastEventID() string {
+	return s.lastEventID
+}
+
+// LastRetryMs returns the most recently parsed `retry:` directive value in
+// milliseconds, or 0 if the stream has not advertised one.
+func (s *SseStreamReader) LastRetryMs() int {
+	return s.lastRetryMs
+}
+
+// TerminatorSeen reports whether the configured terminator was observed by
+// this reader.
+func (s *SseStreamReader) TerminatorSeen() bool {
+	return s.terminatorSeen
+}
+
+func (s *SseStreamReader) parseSseLine(line []byte, event *SseEvent) {
+	if bytes.HasPrefix(line, sseCommentPrefix) {
+		return
+	}
+	if value, ok := s.tryParseField(line, sseDataPrefix, sseDataPrefixNoSpace); ok {
+		if len(event.Data) > 0 {
+			event.Data = append(event.Data, sseDataJoin...)
+		}
+		event.Data = append(event.Data, value...)
+	} else if value, ok := s.tryParseField(line, sseIdPrefix, sseIdPrefixNoSpace); ok {
+		if !bytes.Contains(value, []byte{0}) {
+			event.hasID = true
+			event.ID = string(value)
+		}
+	} else if value, ok := s.tryParseField(line, sseEventPrefix, sseEventPrefixNoSpace); ok {
+		event.Event = string(value)
+	} else if value, ok := s.tryParseField(line, sseRetryPrefix, sseRetryPrefixNoSpace); ok {
+		if n, err := strconv.Atoi(string(bytes.TrimSpace(value))); err == nil && n >= 0 {
+			event.Retry = n
+			s.lastRetryMs = n
+		}
+	}
+}
+
+// tryParseField attempts to parse an SSE field by trying multiple prefix patterns in order.
+// This handles APIs that don't strictly follow the SSE specification by omitting the space after the colon.
+// It tries each prefix in the order provided and returns the value after the first matching prefix.
+func (s *SseStreamReader) tryParseField(line []byte, prefixes ...[]byte) ([]byte, bool) {
+	for _, prefix := range prefixes {
+		if bytes.HasPrefix(line, prefix) {
+			return line[len(prefix):], true
+		}
+	}
+	return nil, false
 }
 
 func (event *SseEvent) size() int {
-	return len(event.id) + len(event.data) + len(event.event) + len(event.retry)
+	return len(event.ID) + len(event.Data) + len(event.Event)
 }
 
 func (event *SseEvent) String() string {
-	return fmt.Sprintf("SseEvent{id: %q, event: %q, data: %q, retry: %q}", event.id, event.event, event.data, event.retry)
+	return fmt.Sprintf("SseEvent{id: %q, event: %q, data: %q, retry: %d}", event.ID, event.Event, event.Data, event.Retry)
+}
+
+// injectDiscriminator inserts a JSON key-value pair for the discriminator
+// at the beginning of a JSON object. For example, given data `{"content":"Hello"}`,
+// field "type", and value "completion", it produces `{"type":"completion","content":"Hello"}`.
+//
+// If the data already contains the discriminator key, it is returned unchanged
+// to avoid duplicate keys. Uses precomputed patterns from reader construction.
+func (s *SseStreamReader) injectDiscriminator(data []byte, value string) []byte {
+	// Find the opening brace, skipping leading whitespace.
+	openIdx := bytes.IndexByte(data, '{')
+	if openIdx < 0 {
+		return data
+	}
+	// Skip injection if the key already exists at the top level of the JSON object.
+	if jsonContainsTopLevelKey(data[openIdx:], s.discriminatorKeyCheck, s.discriminatorKeyCheckSp) {
+		return data
+	}
+	// Build the injected key-value: "field":"value"
+	injected := append(s.discriminatorQuotedField, ':')
+	injected = strconv.AppendQuote(injected, value)
+	after := data[openIdx+1:]
+	afterTrimmed := bytes.TrimSpace(after)
+	var result []byte
+	if len(afterTrimmed) == 0 || afterTrimmed[0] == '}' {
+		result = make([]byte, 0, len(data)+len(injected))
+		result = append(result, data[:openIdx+1]...)
+		result = append(result, injected...)
+		result = append(result, after...)
+	} else {
+		result = make([]byte, 0, len(data)+len(injected)+1)
+		result = append(result, data[:openIdx+1]...)
+		result = append(result, injected...)
+		result = append(result, ',')
+		result = append(result, after...)
+	}
+	return result
+}
+
+// jsonContainsTopLevelKey reports whether the JSON object in data contains the
+// given key at the top level (depth 1). It avoids false positives from keys
+// with the same name nested inside child objects or arrays.
+//
+// data must start at the opening '{' of the JSON object.
+// keyCheck and keyCheckSp are the precomputed patterns "key": and "key" :
+func jsonContainsTopLevelKey(data []byte, keyCheck []byte, keyCheckSp []byte) bool {
+	depth := 0
+	inString := false
+	escaped := false
+	for i := 0; i < len(data); i++ {
+		b := data[i]
+		if escaped {
+			escaped = false
+			continue
+		}
+		if b == '\\' && inString {
+			escaped = true
+			continue
+		}
+		if b == '"' {
+			if !inString && depth == 1 {
+				// At top-level depth, starting a new string — check for key match.
+				remaining := data[i:]
+				if bytes.HasPrefix(remaining, keyCheck) || bytes.HasPrefix(remaining, keyCheckSp) {
+					return true
+				}
+			}
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		switch b {
+		case '{', '[':
+			depth++
+		case '}', ']':
+			depth--
+			if depth <= 0 {
+				return false
+			}
+		}
+	}
+	return false
 }
 
 type SseEvent struct {
-	id    []byte
-	data  []byte
-	event []byte
-	retry []byte
+	SseEventMeta
+	Data  []byte
+	hasID bool
 }
 
 var (
-	sseIdPrefix    = []byte("id: ")
-	sseDataPrefix  = []byte("data: ")
-	sseEventPrefix = []byte("event: ")
-	sseRetryPrefix = []byte("retry: ")
+	sseCommentPrefix = []byte(":")
+	sseIdPrefix      = []byte("id: ")
+	sseDataPrefix    = []byte("data: ")
+	sseEventPrefix   = []byte("event: ")
+	sseRetryPrefix   = []byte("retry: ")
+
+	// Lenient prefixes without space for APIs that don't strictly follow SSE specification
+	sseIdPrefixNoSpace    = []byte("id:")
+	sseDataPrefixNoSpace  = []byte("data:")
+	sseEventPrefixNoSpace = []byte("event:")
+	sseRetryPrefixNoSpace = []byte("retry:")
 )
