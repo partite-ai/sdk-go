@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned actions in .github/workflows up to date. Maintained by hand (.github/ is
+# listed in .fernignore). Dependencies of the SDK itself are left to the generator.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]

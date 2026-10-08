@@ -1,3 +1,4 @@
 # Hand-written files that regeneration must keep. Commit them: regeneration restores
 # them from git and deletes uncommitted files at these paths.
 examples/
+.github/
