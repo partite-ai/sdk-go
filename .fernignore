@@ -3,3 +3,4 @@
 examples/
 .github/
 LICENSE
+.golangci.yml

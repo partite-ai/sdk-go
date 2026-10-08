@@ -1,0 +1,7 @@
+# Maintained by hand (listed in .fernignore); the Go generator doesn't produce a lint config.
+version: "2"
+linters:
+  exclusions:
+    presets:
+      # Don't require checking errors from Close, Flush, fmt.Print* and similar calls.
+      - std-error-handling
