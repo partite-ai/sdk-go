@@ -2,3 +2,4 @@
 # them from git and deletes uncommitted files at these paths.
 examples/
 .github/
+LICENSE
