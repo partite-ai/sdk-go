@@ -162,7 +162,7 @@ func run(argv []string) int {
 }
 
 // streamRequestEvents prints each event of a request as it arrives. It stops
-// at the first terminal event (response, error, cancel, server_error or task)
+// at the first terminal event (response, error, cancelled, server_error or task)
 // and closes the stream rather than waiting for the server to close it.
 // It reports true if the request ended with a response.
 func streamRequestEvents(ctx context.Context, c *client.Client, conversationID, requestID string) (bool, error) {
@@ -198,8 +198,8 @@ func streamRequestEvents(ctx context.Context, c *client.Client, conversationID, 
 		case "error":
 			fmt.Printf("[error] %s\n", event.Error.Data)
 			return false, nil
-		case "cancel":
-			fmt.Printf("[cancel] %s\n", event.Cancel.Data)
+		case "cancelled":
+			fmt.Printf("[cancelled] %s\n", event.Cancelled.Data)
 			return false, nil
 		case "server_error":
 			fmt.Printf("[server_error] %s\n", event.ServerError.Error)

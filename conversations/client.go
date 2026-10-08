@@ -299,7 +299,7 @@ func (c *Client) CompleteTask(
 	return nil
 }
 
-// Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking.
+// Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking. The Accept header selects the format: `text/event-stream` streams as SSE, and `application/x-ndjson` or `application/jsonl` streams as JSON lines. With no Accept header, or `* /*`, the format is `text/event-stream`. An Accept header that allows none of these returns 406.
 //
 // Example:
 //
@@ -347,11 +347,13 @@ func (c *Client) GetRequestEvents(
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
-			MaxBufSize:      options.MaxBufSize,
-			Prefix:          internal.DefaultSSEDataPrefix,
-			Terminator:      internal.DefaultSSETerminator,
-			Format:          core.StreamFormatSSE,
-			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
+			MaxBufSize: internal.StreamMaxBufSize(
+				options.MaxBufSize,
+				c.options.MaxBufSize,
+			),
+			Prefix:       internal.DefaultSSEDataPrefix,
+			Format:       core.StreamFormatSSE,
+			ErrorDecoder: internal.NewErrorDecoder(partiteai.ErrorCodes),
 		},
 	)
 }

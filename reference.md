@@ -694,7 +694,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking.
+Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking. The Accept header selects the format: `text/event-stream` streams as SSE, and `application/x-ndjson` or `application/jsonl` streams as JSON lines. With no Accept header, or `* /*`, the format is `text/event-stream`. An Accept header that allows none of these returns 406.
 </dd>
 </dl>
 </dd>
@@ -1018,7 +1018,7 @@ client.Conversations.GetConversationByExternalID(
 </details>
 
 ## Notification Channels
-<details><summary><code>client.NotificationChannels.GetNotificationChannelEvents(NotificationChannelID) -> *partiteai.NotificationChannelEventList</code></summary>
+<details><summary><code>client.NotificationChannels.GetNotificationChannelEvents(NotificationChannelID) -> partiteai.NotificationChannelStreamData</code></summary>
 <dl>
 <dd>
 
@@ -1030,7 +1030,7 @@ client.Conversations.GetConversationByExternalID(
 <dl>
 <dd>
 
-Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The request Content-Type selects the mode: `text/event-stream` (default) streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
+Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
 </dd>
 </dl>
 </dd>
@@ -1067,14 +1067,6 @@ client.NotificationChannels.GetNotificationChannelEvents(
 <dd>
 
 **notificationChannelID:** `string` — The notification channel id supplied at conversation creation.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**limit:** `*int` — Maximum number of events to return. `application/json` mode only; default 100, maximum 1000.
     
 </dd>
 </dl>

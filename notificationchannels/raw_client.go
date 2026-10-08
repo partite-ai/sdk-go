@@ -32,62 +32,6 @@ func NewRawClient(options *core.RequestOptions) *RawClient {
 	}
 }
 
-func (r *RawClient) GetNotificationChannelEvents(
-	ctx context.Context,
-	request *partiteai.GetNotificationChannelEventsRequest,
-	opts ...option.RequestOption,
-) (*core.Response[*partiteai.NotificationChannelEventList], error) {
-	options := core.NewRequestOptions(opts...)
-	baseURL := internal.ResolveBaseURL(
-		options.BaseURL,
-		r.baseURL,
-		"https://api.partite.ai",
-	)
-	endpointURL := internal.EncodeURL(
-		baseURL+"/notification-channels/%v/events",
-		request.NotificationChannelID,
-	)
-	queryParams, err := internal.QueryValues(request)
-	if err != nil {
-		return nil, err
-	}
-	if len(queryParams) > 0 {
-		endpointURL += "?" + queryParams.Encode()
-	}
-	headers := internal.MergeHeaders(
-		r.options.ToHeader(),
-		options.ToHeader(),
-	)
-	if request.LastEventID != nil {
-		headers.Add("Last-Event-ID", *request.LastEventID)
-	}
-
-	var response *partiteai.NotificationChannelEventList
-	raw, err := r.caller.Call(
-		ctx,
-		&internal.CallParams{
-			URL:             endpointURL,
-			Method:          http.MethodGet,
-			Headers:         headers,
-			MaxAttempts:     options.MaxAttempts,
-			DisableRetries:  options.DisableRetries,
-			BodyProperties:  options.BodyProperties,
-			QueryParameters: options.QueryParameters,
-			Client:          options.HTTPClient,
-			Response:        &response,
-			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &core.Response[*partiteai.NotificationChannelEventList]{
-		StatusCode: raw.StatusCode,
-		Header:     raw.Header,
-		Body:       response,
-	}, nil
-}
-
 func (r *RawClient) CreateNotificationChannel(
 	ctx context.Context,
 	request *partiteai.CreateNotificationChannelRequest,

@@ -1891,7 +1891,7 @@ type ResponseEventData struct {
 	Thinking     *ThinkingEventDetails
 	Response     *ResponseEventDetails
 	Error        *ErrorEventDetails
-	Cancel       *CancelEventDetails
+	Cancelled    *CancelEventDetails
 	ServerError  *ServerErrorEventDetails
 
 	rawJSON json.RawMessage
@@ -1946,11 +1946,11 @@ func (r *ResponseEventData) GetError() *ErrorEventDetails {
 	return r.Error
 }
 
-func (r *ResponseEventData) GetCancel() *CancelEventDetails {
+func (r *ResponseEventData) GetCancelled() *CancelEventDetails {
 	if r == nil {
 		return nil
 	}
-	return r.Cancel
+	return r.Cancelled
 }
 
 func (r *ResponseEventData) GetServerError() *ServerErrorEventDetails {
@@ -2008,12 +2008,12 @@ func (r *ResponseEventData) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		r.Error = value
-	case "cancel":
+	case "cancelled":
 		value := new(CancelEventDetails)
 		if err := json.Unmarshal(data, &value); err != nil {
 			return err
 		}
-		r.Cancel = value
+		r.Cancelled = value
 	case "server_error":
 		value := new(ServerErrorEventDetails)
 		if err := json.Unmarshal(data, &value); err != nil {
@@ -2047,8 +2047,8 @@ func (r ResponseEventData) MarshalJSON() ([]byte, error) {
 	if r.Error != nil {
 		return internal.MarshalJSONWithExtraProperty(r.Error, "type", "error")
 	}
-	if r.Cancel != nil {
-		return internal.MarshalJSONWithExtraProperty(r.Cancel, "type", "cancel")
+	if r.Cancelled != nil {
+		return internal.MarshalJSONWithExtraProperty(r.Cancelled, "type", "cancelled")
 	}
 	if r.ServerError != nil {
 		return internal.MarshalJSONWithExtraProperty(r.ServerError, "type", "server_error")
@@ -2066,7 +2066,7 @@ type ResponseEventDataVisitor interface {
 	VisitThinking(*ThinkingEventDetails) error
 	VisitResponse(*ResponseEventDetails) error
 	VisitError(*ErrorEventDetails) error
-	VisitCancel(*CancelEventDetails) error
+	VisitCancelled(*CancelEventDetails) error
 	VisitServerError(*ServerErrorEventDetails) error
 }
 
@@ -2089,8 +2089,8 @@ func (r *ResponseEventData) Accept(visitor ResponseEventDataVisitor) error {
 	if r.Error != nil {
 		return visitor.VisitError(r.Error)
 	}
-	if r.Cancel != nil {
-		return visitor.VisitCancel(r.Cancel)
+	if r.Cancelled != nil {
+		return visitor.VisitCancelled(r.Cancelled)
 	}
 	if r.ServerError != nil {
 		return visitor.VisitServerError(r.ServerError)
@@ -2121,8 +2121,8 @@ func (r *ResponseEventData) validate() error {
 	if r.Error != nil {
 		fields = append(fields, "error")
 	}
-	if r.Cancel != nil {
-		fields = append(fields, "cancel")
+	if r.Cancelled != nil {
+		fields = append(fields, "cancelled")
 	}
 	if r.ServerError != nil {
 		fields = append(fields, "server_error")
@@ -2151,129 +2151,6 @@ func (r *ResponseEventData) validate() error {
 		}
 	}
 	return nil
-}
-
-var (
-	serverErrorEventDetailsFieldType  = big.NewInt(1 << 0)
-	serverErrorEventDetailsFieldError = big.NewInt(1 << 1)
-)
-
-// Details about an error that occurred during request processing
-type ServerErrorEventDetails struct {
-	Type ServerErrorEventDetailsType `json:"type" url:"type"`
-	// A description of the error that occurred.
-	Error string `json:"error" url:"error"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (s *ServerErrorEventDetails) GetType() ServerErrorEventDetailsType {
-	if s == nil {
-		return ""
-	}
-	return s.Type
-}
-
-func (s *ServerErrorEventDetails) GetError() string {
-	if s == nil {
-		return ""
-	}
-	return s.Error
-}
-
-func (s *ServerErrorEventDetails) GetExtraProperties() map[string]interface{} {
-	if s == nil {
-		return nil
-	}
-	return s.extraProperties
-}
-
-func (s *ServerErrorEventDetails) require(field *big.Int) {
-	next := new(big.Int)
-	if s.explicitFields != nil {
-		next.Set(s.explicitFields)
-	}
-	next.Or(next, field)
-	s.explicitFields = next
-}
-
-// SetType sets the Type field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (s *ServerErrorEventDetails) SetType(type_ ServerErrorEventDetailsType) {
-	s.Type = type_
-	s.require(serverErrorEventDetailsFieldType)
-}
-
-// SetError sets the Error field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (s *ServerErrorEventDetails) SetError(error_ string) {
-	s.Error = error_
-	s.require(serverErrorEventDetailsFieldError)
-}
-
-func (s *ServerErrorEventDetails) UnmarshalJSON(data []byte) error {
-	type unmarshaler ServerErrorEventDetails
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*s = ServerErrorEventDetails(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *s)
-	if err != nil {
-		return err
-	}
-	s.extraProperties = extraProperties
-	s.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (s *ServerErrorEventDetails) MarshalJSON() ([]byte, error) {
-	type embed ServerErrorEventDetails
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*s),
-	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, s.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (s *ServerErrorEventDetails) String() string {
-	if s == nil {
-		return "<nil>"
-	}
-	if len(s.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(s); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", s)
-}
-
-type ServerErrorEventDetailsType string
-
-const (
-	ServerErrorEventDetailsTypeServerError ServerErrorEventDetailsType = "server_error"
-)
-
-func NewServerErrorEventDetailsTypeFromString(s string) (ServerErrorEventDetailsType, error) {
-	switch s {
-	case "server_error":
-		return ServerErrorEventDetailsTypeServerError, nil
-	}
-	var t ServerErrorEventDetailsType
-	return "", fmt.Errorf("%s is not a valid %T", s, t)
-}
-
-func (s ServerErrorEventDetailsType) Ptr() *ServerErrorEventDetailsType {
-	return &s
 }
 
 var (

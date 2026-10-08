@@ -4,6 +4,7 @@ package notificationchannels
 
 import (
 	context "context"
+	http "net/http"
 	os "os"
 
 	partiteai "github.com/partite-ai/sdk-go"
@@ -41,7 +42,7 @@ func NewClient(options *core.RequestOptions) *Client {
 	}
 }
 
-// Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The request Content-Type selects the mode: `text/event-stream` (default) streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
+// Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
 //
 // Example:
 //
@@ -56,16 +57,46 @@ func (c *Client) GetNotificationChannelEvents(
 	ctx context.Context,
 	request *partiteai.GetNotificationChannelEventsRequest,
 	opts ...option.RequestOption,
-) (*partiteai.NotificationChannelEventList, error) {
-	response, err := c.WithRawResponse.GetNotificationChannelEvents(
-		ctx,
-		request,
-		opts...,
+) (*core.Stream[partiteai.NotificationChannelStreamData], error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"https://api.partite.ai",
 	)
-	if err != nil {
-		return nil, err
+	endpointURL := internal.EncodeURL(
+		baseURL+"/notification-channels/%v/events",
+		request.NotificationChannelID,
+	)
+	headers := internal.MergeHeaders(
+		c.options.ToHeader(),
+		options.ToHeader(),
+	)
+	if request.LastEventID != nil {
+		headers.Add("Last-Event-ID", *request.LastEventID)
 	}
-	return response.Body, nil
+	headers.Add("Accept", "text/event-stream")
+	streamer := internal.NewStreamer[partiteai.NotificationChannelStreamData](c.caller)
+	return streamer.Stream(
+		ctx,
+		&internal.StreamParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			MaxBufSize: internal.StreamMaxBufSize(
+				options.MaxBufSize,
+				c.options.MaxBufSize,
+			),
+			Prefix:       internal.DefaultSSEDataPrefix,
+			Format:       core.StreamFormatSSE,
+			ErrorDecoder: internal.NewErrorDecoder(partiteai.ErrorCodes),
+		},
+	)
 }
 
 // Example:

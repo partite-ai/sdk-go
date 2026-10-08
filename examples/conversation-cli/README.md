@@ -55,7 +55,7 @@ the follow-up request carries no attachments. So when `--attach` is given,
 
 Each event is printed on its own line, e.g. `[thinking] ...`, `[message] ...`,
 `[response] {...}`. The example stops reading a request's event stream as soon as it
-sees a terminal event (`response`, `error`, `cancel`, `server_error` or `task`).
+sees a terminal event (`response`, `error`, `cancelled`, `server_error` or `task`).
 
 | Exit code | Meaning |
 |-----------|---------|

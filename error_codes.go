@@ -28,4 +28,9 @@ var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{
 			APIError: apiError,
 		}
 	},
+	406: func(apiError *core.APIError) error {
+		return &NotAcceptableError{
+			APIError: apiError,
+		}
+	},
 }

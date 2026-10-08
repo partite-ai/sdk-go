@@ -100,6 +100,37 @@ func (i *InternalServerError) GetBody() *GenericErrorResponse {
 	return i.Body
 }
 
+// The Accept header allows none of the formats.
+type NotAcceptableError struct {
+	*core.APIError
+	Body *GenericErrorResponse
+}
+
+func (n *NotAcceptableError) UnmarshalJSON(data []byte) error {
+	var body *GenericErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	n.StatusCode = 406
+	n.Body = body
+	return nil
+}
+
+func (n *NotAcceptableError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n.Body)
+}
+
+func (n *NotAcceptableError) Unwrap() error {
+	return n.APIError
+}
+
+func (n *NotAcceptableError) GetBody() *GenericErrorResponse {
+	if n == nil {
+		return nil
+	}
+	return n.Body
+}
+
 // The specified resource was not found.
 type NotFoundError struct {
 	*core.APIError

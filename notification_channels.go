@@ -40,7 +40,6 @@ func (c *CreateNotificationChannelRequest) SetNotificationChannelID(notification
 var (
 	getNotificationChannelEventsRequestFieldLastEventID           = big.NewInt(1 << 0)
 	getNotificationChannelEventsRequestFieldNotificationChannelID = big.NewInt(1 << 1)
-	getNotificationChannelEventsRequestFieldLimit                 = big.NewInt(1 << 2)
 )
 
 type GetNotificationChannelEventsRequest struct {
@@ -48,8 +47,6 @@ type GetNotificationChannelEventsRequest struct {
 	LastEventID *string `json:"-" url:"-"`
 	// The notification channel id supplied at conversation creation.
 	NotificationChannelID string `json:"-" url:"-"`
-	// Maximum number of events to return. `application/json` mode only; default 100, maximum 1000.
-	Limit *int `json:"-" url:"limit,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -76,13 +73,6 @@ func (g *GetNotificationChannelEventsRequest) SetLastEventID(lastEventID *string
 func (g *GetNotificationChannelEventsRequest) SetNotificationChannelID(notificationChannelID string) {
 	g.NotificationChannelID = notificationChannelID
 	g.require(getNotificationChannelEventsRequestFieldNotificationChannelID)
-}
-
-// SetLimit sets the Limit field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (g *GetNotificationChannelEventsRequest) SetLimit(limit *int) {
-	g.Limit = limit
-	g.require(getNotificationChannelEventsRequestFieldLimit)
 }
 
 var (
@@ -174,15 +164,17 @@ func (n *NotificationChannelCreated) String() string {
 }
 
 var (
-	notificationChannelEventFieldID                     = big.NewInt(1 << 0)
-	notificationChannelEventFieldConversationID         = big.NewInt(1 << 1)
-	notificationChannelEventFieldConversationExternalID = big.NewInt(1 << 2)
-	notificationChannelEventFieldRequestID              = big.NewInt(1 << 3)
-	notificationChannelEventFieldOutput                 = big.NewInt(1 << 4)
+	notificationChannelEventFieldType                   = big.NewInt(1 << 0)
+	notificationChannelEventFieldID                     = big.NewInt(1 << 1)
+	notificationChannelEventFieldConversationID         = big.NewInt(1 << 2)
+	notificationChannelEventFieldConversationExternalID = big.NewInt(1 << 3)
+	notificationChannelEventFieldRequestID              = big.NewInt(1 << 4)
+	notificationChannelEventFieldOutput                 = big.NewInt(1 << 5)
 )
 
 // One event delivered on a notification channel: the request output, exactly as the per-request events endpoint delivers it, wrapped in the event id and routing ids.
 type NotificationChannelEvent struct {
+	Type NotificationChannelEventType `json:"type" url:"type"`
 	// The event's opaque id (`rnco_…`). Send it as `Last-Event-ID` to resume this channel after this event. Ids are ordered and unique per channel, not globally.
 	ID string `json:"id" url:"id"`
 	// The conversation that produced the event.
@@ -198,6 +190,13 @@ type NotificationChannelEvent struct {
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
+}
+
+func (n *NotificationChannelEvent) GetType() NotificationChannelEventType {
+	if n == nil {
+		return ""
+	}
+	return n.Type
 }
 
 func (n *NotificationChannelEvent) GetID() string {
@@ -249,6 +248,13 @@ func (n *NotificationChannelEvent) require(field *big.Int) {
 	}
 	next.Or(next, field)
 	n.explicitFields = next
+}
+
+// SetType sets the Type field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (n *NotificationChannelEvent) SetType(type_ NotificationChannelEventType) {
+	n.Type = type_
+	n.require(notificationChannelEventFieldType)
 }
 
 // SetID sets the ID field and marks it as non-optional;
@@ -328,106 +334,148 @@ func (n *NotificationChannelEvent) String() string {
 	return fmt.Sprintf("%#v", n)
 }
 
-var (
-	notificationChannelEventListFieldEvents = big.NewInt(1 << 0)
-	notificationChannelEventListFieldNext   = big.NewInt(1 << 1)
+type NotificationChannelEventType string
+
+const (
+	NotificationChannelEventTypeNotification NotificationChannelEventType = "notification"
 )
 
-// One page of notification channel events.
-type NotificationChannelEventList struct {
-	Events []*NotificationChannelEvent `json:"events" url:"events"`
-	// The event id to resume from: the last event's id, or, when `events` is empty, the position the request read from. Send it as `Last-Event-ID`.
-	Next string `json:"next" url:"next"`
-
-	// Private bitmask of fields set to an explicit value and therefore not to be omitted
-	explicitFields *big.Int `json:"-" url:"-"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (n *NotificationChannelEventList) GetEvents() []*NotificationChannelEvent {
-	if n == nil {
-		return nil
+func NewNotificationChannelEventTypeFromString(s string) (NotificationChannelEventType, error) {
+	switch s {
+	case "notification":
+		return NotificationChannelEventTypeNotification, nil
 	}
-	return n.Events
+	var t NotificationChannelEventType
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
 }
 
-func (n *NotificationChannelEventList) GetNext() string {
+func (n NotificationChannelEventType) Ptr() *NotificationChannelEventType {
+	return &n
+}
+
+// One line of a notification channel stream, either an event or a server error.
+type NotificationChannelStreamData struct {
+	Type         string
+	Notification *NotificationChannelEvent
+	ServerError  *ServerErrorEventDetails
+
+	rawJSON json.RawMessage
+}
+
+func (n *NotificationChannelStreamData) GetType() string {
 	if n == nil {
 		return ""
 	}
-	return n.Next
+	return n.Type
 }
 
-func (n *NotificationChannelEventList) GetExtraProperties() map[string]interface{} {
+func (n *NotificationChannelStreamData) GetNotification() *NotificationChannelEvent {
 	if n == nil {
 		return nil
 	}
-	return n.extraProperties
+	return n.Notification
 }
 
-func (n *NotificationChannelEventList) require(field *big.Int) {
-	next := new(big.Int)
-	if n.explicitFields != nil {
-		next.Set(n.explicitFields)
+func (n *NotificationChannelStreamData) GetServerError() *ServerErrorEventDetails {
+	if n == nil {
+		return nil
 	}
-	next.Or(next, field)
-	n.explicitFields = next
+	return n.ServerError
 }
 
-// SetEvents sets the Events field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (n *NotificationChannelEventList) SetEvents(events []*NotificationChannelEvent) {
-	n.Events = events
-	n.require(notificationChannelEventListFieldEvents)
-}
-
-// SetNext sets the Next field and marks it as non-optional;
-// this prevents an empty or null value for this field from being omitted during serialization.
-func (n *NotificationChannelEventList) SetNext(next string) {
-	n.Next = next
-	n.require(notificationChannelEventListFieldNext)
-}
-
-func (n *NotificationChannelEventList) UnmarshalJSON(data []byte) error {
-	type unmarshaler NotificationChannelEventList
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
+func (n *NotificationChannelStreamData) UnmarshalJSON(data []byte) error {
+	var unmarshaler struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &unmarshaler); err != nil {
 		return err
 	}
-	*n = NotificationChannelEventList(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *n)
-	if err != nil {
-		return err
+	n.Type = unmarshaler.Type
+	if unmarshaler.Type == "" {
+		return fmt.Errorf("%T did not include discriminant type", n)
 	}
-	n.extraProperties = extraProperties
+	switch unmarshaler.Type {
+	case "notification":
+		value := new(NotificationChannelEvent)
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		n.Notification = value
+	case "server_error":
+		value := new(ServerErrorEventDetails)
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		n.ServerError = value
+	}
 	n.rawJSON = json.RawMessage(data)
 	return nil
 }
 
-func (n *NotificationChannelEventList) MarshalJSON() ([]byte, error) {
-	type embed NotificationChannelEventList
-	var marshaler = struct {
-		embed
-	}{
-		embed: embed(*n),
+func (n NotificationChannelStreamData) MarshalJSON() ([]byte, error) {
+	if err := n.validate(); err != nil {
+		return nil, err
 	}
-	explicitMarshaler := internal.HandleExplicitFields(marshaler, n.explicitFields)
-	return json.Marshal(explicitMarshaler)
-}
-
-func (n *NotificationChannelEventList) String() string {
-	if n == nil {
-		return "<nil>"
+	if n.Notification != nil {
+		return internal.MarshalJSONWithExtraProperty(n.Notification, "type", "notification")
+	}
+	if n.ServerError != nil {
+		return internal.MarshalJSONWithExtraProperty(n.ServerError, "type", "server_error")
 	}
 	if len(n.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(n.rawJSON); err == nil {
-			return value
+		return n.rawJSON, nil
+	}
+	return nil, fmt.Errorf("type %T does not define a non-empty union type", n)
+}
+
+type NotificationChannelStreamDataVisitor interface {
+	VisitNotification(*NotificationChannelEvent) error
+	VisitServerError(*ServerErrorEventDetails) error
+}
+
+func (n *NotificationChannelStreamData) Accept(visitor NotificationChannelStreamDataVisitor) error {
+	if n.Notification != nil {
+		return visitor.VisitNotification(n.Notification)
+	}
+	if n.ServerError != nil {
+		return visitor.VisitServerError(n.ServerError)
+	}
+	return fmt.Errorf("type %T does not define a non-empty union type", n)
+}
+
+func (n *NotificationChannelStreamData) validate() error {
+	if n == nil {
+		return fmt.Errorf("type %T is nil", n)
+	}
+	var fields []string
+	if n.Notification != nil {
+		fields = append(fields, "notification")
+	}
+	if n.ServerError != nil {
+		fields = append(fields, "server_error")
+	}
+	if len(fields) == 0 {
+		if n.Type != "" {
+			if len(n.rawJSON) > 0 {
+				return nil
+			}
+			return fmt.Errorf("type %T defines a discriminant set to %q but the field is not set", n, n.Type)
+		}
+		return fmt.Errorf("type %T is empty", n)
+	}
+	if len(fields) > 1 {
+		return fmt.Errorf("type %T defines values for %s, but only one value is allowed", n, fields)
+	}
+	if n.Type != "" {
+		field := fields[0]
+		if n.Type != field {
+			return fmt.Errorf(
+				"type %T defines a discriminant set to %q, but it does not match the %T field; either remove or update the discriminant to match",
+				n,
+				n.Type,
+				n,
+			)
 		}
 	}
-	if value, err := internal.StringifyJSON(n); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", n)
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/textproto"
+	"path/filepath"
 	"strings"
 )
 
@@ -179,8 +180,9 @@ func getContentType(file io.Reader) string {
 
 // getFilename returns the name for the given file, if any.
 func getFilename(file io.Reader) string {
-	if v, ok := file.(Named); ok {
-		return v.Name()
+	if v, ok := file.(Named); ok && v.Name() != "" {
+		// *os.File.Name() is the path it was opened with; send only the base name.
+		return filepath.Base(v.Name())
 	}
 	return ""
 }

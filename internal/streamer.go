@@ -53,6 +53,15 @@ type StreamParams struct {
 	MaxBufSize                 int
 }
 
+// StreamMaxBufSize returns the per-request max stream buffer size, or the client-level one when
+// the request doesn't set it.
+func StreamMaxBufSize(requestSize, clientSize int) int {
+	if requestSize > 0 {
+		return requestSize
+	}
+	return clientSize
+}
+
 // Stream issues an API streaming call according to the given stream parameters.
 func (s *Streamer[T]) Stream(ctx context.Context, params *StreamParams) (*core.Stream[T], error) {
 	return s.stream(ctx, params, false /* withReconnect */)

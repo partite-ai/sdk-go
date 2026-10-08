@@ -888,7 +888,7 @@ type MessageEventData struct {
 	Thinking     *ThinkingEventDetails
 	Response     *ResponseEventDetails
 	Error        *ErrorEventDetails
-	Cancel       *CancelEventDetails
+	Cancelled    *CancelEventDetails
 
 	rawJSON json.RawMessage
 }
@@ -942,11 +942,11 @@ func (m *MessageEventData) GetError() *ErrorEventDetails {
 	return m.Error
 }
 
-func (m *MessageEventData) GetCancel() *CancelEventDetails {
+func (m *MessageEventData) GetCancelled() *CancelEventDetails {
 	if m == nil {
 		return nil
 	}
-	return m.Cancel
+	return m.Cancelled
 }
 
 func (m *MessageEventData) UnmarshalJSON(data []byte) error {
@@ -997,12 +997,12 @@ func (m *MessageEventData) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		m.Error = value
-	case "cancel":
+	case "cancelled":
 		value := new(CancelEventDetails)
 		if err := json.Unmarshal(data, &value); err != nil {
 			return err
 		}
-		m.Cancel = value
+		m.Cancelled = value
 	}
 	m.rawJSON = json.RawMessage(data)
 	return nil
@@ -1030,8 +1030,8 @@ func (m MessageEventData) MarshalJSON() ([]byte, error) {
 	if m.Error != nil {
 		return internal.MarshalJSONWithExtraProperty(m.Error, "type", "error")
 	}
-	if m.Cancel != nil {
-		return internal.MarshalJSONWithExtraProperty(m.Cancel, "type", "cancel")
+	if m.Cancelled != nil {
+		return internal.MarshalJSONWithExtraProperty(m.Cancelled, "type", "cancelled")
 	}
 	if len(m.rawJSON) > 0 {
 		return m.rawJSON, nil
@@ -1046,7 +1046,7 @@ type MessageEventDataVisitor interface {
 	VisitThinking(*ThinkingEventDetails) error
 	VisitResponse(*ResponseEventDetails) error
 	VisitError(*ErrorEventDetails) error
-	VisitCancel(*CancelEventDetails) error
+	VisitCancelled(*CancelEventDetails) error
 }
 
 func (m *MessageEventData) Accept(visitor MessageEventDataVisitor) error {
@@ -1068,8 +1068,8 @@ func (m *MessageEventData) Accept(visitor MessageEventDataVisitor) error {
 	if m.Error != nil {
 		return visitor.VisitError(m.Error)
 	}
-	if m.Cancel != nil {
-		return visitor.VisitCancel(m.Cancel)
+	if m.Cancelled != nil {
+		return visitor.VisitCancelled(m.Cancelled)
 	}
 	return fmt.Errorf("type %T does not define a non-empty union type", m)
 }
@@ -1097,8 +1097,8 @@ func (m *MessageEventData) validate() error {
 	if m.Error != nil {
 		fields = append(fields, "error")
 	}
-	if m.Cancel != nil {
-		fields = append(fields, "cancel")
+	if m.Cancelled != nil {
+		fields = append(fields, "cancelled")
 	}
 	if len(fields) == 0 {
 		if m.Type != "" {
@@ -1229,6 +1229,110 @@ func (m *MessageEventDetails) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", m)
+}
+
+var (
+	notificationChannelEventListFieldEvents = big.NewInt(1 << 0)
+	notificationChannelEventListFieldNext   = big.NewInt(1 << 1)
+)
+
+// One page of notification channel events.
+type NotificationChannelEventList struct {
+	Events []*NotificationChannelEvent `json:"events" url:"events"`
+	// The event id to resume from: the last event's id, or, when `events` is empty, the position the request read from. Send it as `Last-Event-ID`.
+	Next string `json:"next" url:"next"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (n *NotificationChannelEventList) GetEvents() []*NotificationChannelEvent {
+	if n == nil {
+		return nil
+	}
+	return n.Events
+}
+
+func (n *NotificationChannelEventList) GetNext() string {
+	if n == nil {
+		return ""
+	}
+	return n.Next
+}
+
+func (n *NotificationChannelEventList) GetExtraProperties() map[string]interface{} {
+	if n == nil {
+		return nil
+	}
+	return n.extraProperties
+}
+
+func (n *NotificationChannelEventList) require(field *big.Int) {
+	next := new(big.Int)
+	if n.explicitFields != nil {
+		next.Set(n.explicitFields)
+	}
+	next.Or(next, field)
+	n.explicitFields = next
+}
+
+// SetEvents sets the Events field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (n *NotificationChannelEventList) SetEvents(events []*NotificationChannelEvent) {
+	n.Events = events
+	n.require(notificationChannelEventListFieldEvents)
+}
+
+// SetNext sets the Next field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (n *NotificationChannelEventList) SetNext(next string) {
+	n.Next = next
+	n.require(notificationChannelEventListFieldNext)
+}
+
+func (n *NotificationChannelEventList) UnmarshalJSON(data []byte) error {
+	type unmarshaler NotificationChannelEventList
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*n = NotificationChannelEventList(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *n)
+	if err != nil {
+		return err
+	}
+	n.extraProperties = extraProperties
+	n.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (n *NotificationChannelEventList) MarshalJSON() ([]byte, error) {
+	type embed NotificationChannelEventList
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*n),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, n.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (n *NotificationChannelEventList) String() string {
+	if n == nil {
+		return "<nil>"
+	}
+	if len(n.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(n.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(n); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", n)
 }
 
 var (
@@ -1564,6 +1668,129 @@ func (r *ResponseEventDetails) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", r)
+}
+
+var (
+	serverErrorEventDetailsFieldType  = big.NewInt(1 << 0)
+	serverErrorEventDetailsFieldError = big.NewInt(1 << 1)
+)
+
+// Details about an error that occurred during request processing
+type ServerErrorEventDetails struct {
+	Type ServerErrorEventDetailsType `json:"type" url:"type"`
+	// A description of the error that occurred.
+	Error string `json:"error" url:"error"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (s *ServerErrorEventDetails) GetType() ServerErrorEventDetailsType {
+	if s == nil {
+		return ""
+	}
+	return s.Type
+}
+
+func (s *ServerErrorEventDetails) GetError() string {
+	if s == nil {
+		return ""
+	}
+	return s.Error
+}
+
+func (s *ServerErrorEventDetails) GetExtraProperties() map[string]interface{} {
+	if s == nil {
+		return nil
+	}
+	return s.extraProperties
+}
+
+func (s *ServerErrorEventDetails) require(field *big.Int) {
+	next := new(big.Int)
+	if s.explicitFields != nil {
+		next.Set(s.explicitFields)
+	}
+	next.Or(next, field)
+	s.explicitFields = next
+}
+
+// SetType sets the Type field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (s *ServerErrorEventDetails) SetType(type_ ServerErrorEventDetailsType) {
+	s.Type = type_
+	s.require(serverErrorEventDetailsFieldType)
+}
+
+// SetError sets the Error field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (s *ServerErrorEventDetails) SetError(error_ string) {
+	s.Error = error_
+	s.require(serverErrorEventDetailsFieldError)
+}
+
+func (s *ServerErrorEventDetails) UnmarshalJSON(data []byte) error {
+	type unmarshaler ServerErrorEventDetails
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*s = ServerErrorEventDetails(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *s)
+	if err != nil {
+		return err
+	}
+	s.extraProperties = extraProperties
+	s.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (s *ServerErrorEventDetails) MarshalJSON() ([]byte, error) {
+	type embed ServerErrorEventDetails
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*s),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, s.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (s *ServerErrorEventDetails) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+	if len(s.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(s); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", s)
+}
+
+type ServerErrorEventDetailsType string
+
+const (
+	ServerErrorEventDetailsTypeServerError ServerErrorEventDetailsType = "server_error"
+)
+
+func NewServerErrorEventDetailsTypeFromString(s string) (ServerErrorEventDetailsType, error) {
+	switch s {
+	case "server_error":
+		return ServerErrorEventDetailsTypeServerError, nil
+	}
+	var t ServerErrorEventDetailsType
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (s ServerErrorEventDetailsType) Ptr() *ServerErrorEventDetailsType {
+	return &s
 }
 
 type SseEvent struct {
