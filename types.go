@@ -10,6 +10,302 @@ import (
 )
 
 var (
+	a2UIPresentationFieldContent = big.NewInt(1 << 0)
+)
+
+// An A2UI v0.9 surface for each state of the task.
+type A2UIPresentation struct {
+	Content *A2UISurfaces `json:"content" url:"content"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *A2UIPresentation) GetContent() *A2UISurfaces {
+	if a == nil {
+		return nil
+	}
+	return a.Content
+}
+
+func (a *A2UIPresentation) GetExtraProperties() map[string]interface{} {
+	if a == nil {
+		return nil
+	}
+	return a.extraProperties
+}
+
+func (a *A2UIPresentation) require(field *big.Int) {
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
+	}
+	next.Or(next, field)
+	a.explicitFields = next
+}
+
+// SetContent sets the Content field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (a *A2UIPresentation) SetContent(content *A2UISurfaces) {
+	a.Content = content
+	a.require(a2UIPresentationFieldContent)
+}
+
+func (a *A2UIPresentation) UnmarshalJSON(data []byte) error {
+	type unmarshaler A2UIPresentation
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = A2UIPresentation(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *A2UIPresentation) MarshalJSON() ([]byte, error) {
+	type embed A2UIPresentation
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*a),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, a.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (a *A2UIPresentation) String() string {
+	if a == nil {
+		return "<nil>"
+	}
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+var (
+	a2UISurfaceComponentsFieldComponents = big.NewInt(1 << 0)
+)
+
+type A2UISurfaceComponents struct {
+	// The surface's A2UI v0.9 components. The entry component has id `root`. Values the task definition takes from the task input are already filled in.
+	Components []map[string]any `json:"components" url:"components"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *A2UISurfaceComponents) GetComponents() []map[string]any {
+	if a == nil {
+		return nil
+	}
+	return a.Components
+}
+
+func (a *A2UISurfaceComponents) GetExtraProperties() map[string]interface{} {
+	if a == nil {
+		return nil
+	}
+	return a.extraProperties
+}
+
+func (a *A2UISurfaceComponents) require(field *big.Int) {
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
+	}
+	next.Or(next, field)
+	a.explicitFields = next
+}
+
+// SetComponents sets the Components field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (a *A2UISurfaceComponents) SetComponents(components []map[string]any) {
+	a.Components = components
+	a.require(a2UISurfaceComponentsFieldComponents)
+}
+
+func (a *A2UISurfaceComponents) UnmarshalJSON(data []byte) error {
+	type unmarshaler A2UISurfaceComponents
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = A2UISurfaceComponents(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *A2UISurfaceComponents) MarshalJSON() ([]byte, error) {
+	type embed A2UISurfaceComponents
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*a),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, a.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (a *A2UISurfaceComponents) String() string {
+	if a == nil {
+		return "<nil>"
+	}
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+var (
+	a2UISurfacesFieldCatalogID = big.NewInt(1 << 0)
+	a2UISurfacesFieldOpen      = big.NewInt(1 << 1)
+	a2UISurfacesFieldCompleted = big.NewInt(1 << 2)
+)
+
+// The content of an `a2ui` presentation, an A2UI v0.9 surface for each state of the task. While the task is open, a client renders `open`. Once the task is completed, it renders `completed` in its place, or removes the surface if there is no `completed`. Once the task is cancelled, it removes the surface.
+type A2UISurfaces struct {
+	// The catalog the components come from.
+	CatalogID string `json:"catalogId" url:"catalogId"`
+	// The surface while the task is open. Its data model is the task's `input`. Every event action completes the task, with the action's context as the output.
+	Open *A2UISurfaceComponents `json:"open" url:"open"`
+	// The surface once the task is completed. Its data model is the task's output, the data of the `task_response`. It has no event actions.
+	Completed *A2UISurfaceComponents `json:"completed,omitempty" url:"completed,omitempty"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *A2UISurfaces) GetCatalogID() string {
+	if a == nil {
+		return ""
+	}
+	return a.CatalogID
+}
+
+func (a *A2UISurfaces) GetOpen() *A2UISurfaceComponents {
+	if a == nil {
+		return nil
+	}
+	return a.Open
+}
+
+func (a *A2UISurfaces) GetCompleted() *A2UISurfaceComponents {
+	if a == nil {
+		return nil
+	}
+	return a.Completed
+}
+
+func (a *A2UISurfaces) GetExtraProperties() map[string]interface{} {
+	if a == nil {
+		return nil
+	}
+	return a.extraProperties
+}
+
+func (a *A2UISurfaces) require(field *big.Int) {
+	next := new(big.Int)
+	if a.explicitFields != nil {
+		next.Set(a.explicitFields)
+	}
+	next.Or(next, field)
+	a.explicitFields = next
+}
+
+// SetCatalogID sets the CatalogID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (a *A2UISurfaces) SetCatalogID(catalogID string) {
+	a.CatalogID = catalogID
+	a.require(a2UISurfacesFieldCatalogID)
+}
+
+// SetOpen sets the Open field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (a *A2UISurfaces) SetOpen(open *A2UISurfaceComponents) {
+	a.Open = open
+	a.require(a2UISurfacesFieldOpen)
+}
+
+// SetCompleted sets the Completed field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (a *A2UISurfaces) SetCompleted(completed *A2UISurfaceComponents) {
+	a.Completed = completed
+	a.require(a2UISurfacesFieldCompleted)
+}
+
+func (a *A2UISurfaces) UnmarshalJSON(data []byte) error {
+	type unmarshaler A2UISurfaces
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = A2UISurfaces(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *A2UISurfaces) MarshalJSON() ([]byte, error) {
+	type embed A2UISurfaces
+	var marshaler = struct {
+		embed
+	}{
+		embed: embed(*a),
+	}
+	explicitMarshaler := internal.HandleExplicitFields(marshaler, a.explicitFields)
+	return json.Marshal(explicitMarshaler)
+}
+
+func (a *A2UISurfaces) String() string {
+	if a == nil {
+		return "<nil>"
+	}
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+var (
 	badRequestErrorResponseFieldError     = big.NewInt(1 << 0)
 	badRequestErrorResponseFieldParameter = big.NewInt(1 << 1)
 )
@@ -1565,6 +1861,109 @@ func (n *NotificationChannelSseEvent) validate() error {
 	return nil
 }
 
+// One way a client can present a task to the user. `type` says what `content` holds.
+type Presentation struct {
+	Type string
+	A2UI *A2UIPresentation
+
+	rawJSON json.RawMessage
+}
+
+func (p *Presentation) GetType() string {
+	if p == nil {
+		return ""
+	}
+	return p.Type
+}
+
+func (p *Presentation) GetA2UI() *A2UIPresentation {
+	if p == nil {
+		return nil
+	}
+	return p.A2UI
+}
+
+func (p *Presentation) UnmarshalJSON(data []byte) error {
+	var unmarshaler struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &unmarshaler); err != nil {
+		return err
+	}
+	p.Type = unmarshaler.Type
+	if unmarshaler.Type == "" {
+		return fmt.Errorf("%T did not include discriminant type", p)
+	}
+	switch unmarshaler.Type {
+	case "a2ui":
+		value := new(A2UIPresentation)
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		p.A2UI = value
+	}
+	p.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (p Presentation) MarshalJSON() ([]byte, error) {
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
+	if p.A2UI != nil {
+		return internal.MarshalJSONWithExtraProperty(p.A2UI, "type", "a2ui")
+	}
+	if len(p.rawJSON) > 0 {
+		return p.rawJSON, nil
+	}
+	return nil, fmt.Errorf("type %T does not define a non-empty union type", p)
+}
+
+type PresentationVisitor interface {
+	VisitA2UI(*A2UIPresentation) error
+}
+
+func (p *Presentation) Accept(visitor PresentationVisitor) error {
+	if p.A2UI != nil {
+		return visitor.VisitA2UI(p.A2UI)
+	}
+	return fmt.Errorf("type %T does not define a non-empty union type", p)
+}
+
+func (p *Presentation) validate() error {
+	if p == nil {
+		return fmt.Errorf("type %T is nil", p)
+	}
+	var fields []string
+	if p.A2UI != nil {
+		fields = append(fields, "a2ui")
+	}
+	if len(fields) == 0 {
+		if p.Type != "" {
+			if len(p.rawJSON) > 0 {
+				return nil
+			}
+			return fmt.Errorf("type %T defines a discriminant set to %q but the field is not set", p, p.Type)
+		}
+		return fmt.Errorf("type %T is empty", p)
+	}
+	if len(fields) > 1 {
+		return fmt.Errorf("type %T defines values for %s, but only one value is allowed", p, fields)
+	}
+	if p.Type != "" {
+		field := fields[0]
+		if p.Type != field {
+			return fmt.Errorf(
+				"type %T defines a discriminant set to %q, but it does not match the %T field; either remove or update the discriminant to match",
+				p,
+				p.Type,
+				p,
+			)
+		}
+	}
+	return nil
+}
+
 var (
 	responseEventDetailsFieldID   = big.NewInt(1 << 0)
 	responseEventDetailsFieldData = big.NewInt(1 << 1)
@@ -1920,9 +2319,10 @@ func (s *SseEvent) validate() error {
 }
 
 var (
-	taskDataFieldInput        = big.NewInt(1 << 0)
-	taskDataFieldTaskType     = big.NewInt(1 << 1)
-	taskDataFieldOutputSchema = big.NewInt(1 << 2)
+	taskDataFieldInput         = big.NewInt(1 << 0)
+	taskDataFieldTaskType      = big.NewInt(1 << 1)
+	taskDataFieldOutputSchema  = big.NewInt(1 << 2)
+	taskDataFieldPresentations = big.NewInt(1 << 3)
 )
 
 // Details about the task the user must perform to continue processing the request
@@ -1933,6 +2333,8 @@ type TaskData struct {
 	TaskType string `json:"task_type" url:"task_type"`
 	// A JSON Schema describing the object that must be submitted to complete this task. The schema is captured on the task when it is created, so it remains authoritative for this task even if the task definition is later modified or deleted.
 	OutputSchema map[string]any `json:"output_schema" url:"output_schema"`
+	// How a client can present this task, such as a UI form from the task definition. Captured on the task when it is created, like `output_schema`. A client that understands none of them can still complete the task from `input` and `output_schema`. Tasks created before presentations existed do not have this property.
+	Presentations []*Presentation `json:"presentations,omitempty" url:"presentations,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -1960,6 +2362,13 @@ func (t *TaskData) GetOutputSchema() map[string]any {
 		return nil
 	}
 	return t.OutputSchema
+}
+
+func (t *TaskData) GetPresentations() []*Presentation {
+	if t == nil {
+		return nil
+	}
+	return t.Presentations
 }
 
 func (t *TaskData) GetExtraProperties() map[string]interface{} {
@@ -1997,6 +2406,13 @@ func (t *TaskData) SetTaskType(taskType string) {
 func (t *TaskData) SetOutputSchema(outputSchema map[string]any) {
 	t.OutputSchema = outputSchema
 	t.require(taskDataFieldOutputSchema)
+}
+
+// SetPresentations sets the Presentations field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (t *TaskData) SetPresentations(presentations []*Presentation) {
+	t.Presentations = presentations
+	t.require(taskDataFieldPresentations)
 }
 
 func (t *TaskData) UnmarshalJSON(data []byte) error {
@@ -2155,8 +2571,8 @@ var (
 type TaskResponseEventDetails struct {
 	// The ID of the task response event
 	ID string `json:"id" url:"id"`
-	// The response submitted to complete the task. An object conforming to the `output_schema` of the task event referenced by `in_reply_to` (e.g. `{"answer": "..."}` for the built-in `ask_question` task).
-	Data map[string]any `json:"data" url:"data"`
+	// The response submitted to complete the task. An object conforming to the `output_schema` of the task event referenced by `in_reply_to` (e.g. `{"answer": "..."}` for the built-in `ask_question` task), or the string `"cancelled"` when the user cancelled the task. A cancelled task returns an error to the agent, and the request goes on.
+	Data *TaskResponseEventDetailsData `json:"data" url:"data"`
 	// The ID of the task event this is a response to.
 	InReplyTo string `json:"in_reply_to" url:"in_reply_to"`
 
@@ -2174,7 +2590,7 @@ func (t *TaskResponseEventDetails) GetID() string {
 	return t.ID
 }
 
-func (t *TaskResponseEventDetails) GetData() map[string]any {
+func (t *TaskResponseEventDetails) GetData() *TaskResponseEventDetailsData {
 	if t == nil {
 		return nil
 	}
@@ -2213,7 +2629,7 @@ func (t *TaskResponseEventDetails) SetID(id string) {
 
 // SetData sets the Data field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
-func (t *TaskResponseEventDetails) SetData(data map[string]any) {
+func (t *TaskResponseEventDetails) SetData(data *TaskResponseEventDetailsData) {
 	t.Data = data
 	t.require(taskResponseEventDetailsFieldData)
 }
@@ -2265,6 +2681,88 @@ func (t *TaskResponseEventDetails) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", t)
+}
+
+// The response submitted to complete the task. An object conforming to the `output_schema` of the task event referenced by `in_reply_to` (e.g. `{"answer": "..."}` for the built-in `ask_question` task), or the string `"cancelled"` when the user cancelled the task. A cancelled task returns an error to the agent, and the request goes on.
+type TaskResponseEventDetailsData struct {
+	StringUnknownMap                map[string]any
+	TaskResponseEventDetailsDataOne TaskResponseEventDetailsDataOne
+
+	typ string
+}
+
+func (t *TaskResponseEventDetailsData) GetStringUnknownMap() map[string]any {
+	if t == nil {
+		return nil
+	}
+	return t.StringUnknownMap
+}
+
+func (t *TaskResponseEventDetailsData) GetTaskResponseEventDetailsDataOne() TaskResponseEventDetailsDataOne {
+	if t == nil {
+		return ""
+	}
+	return t.TaskResponseEventDetailsDataOne
+}
+
+func (t *TaskResponseEventDetailsData) UnmarshalJSON(data []byte) error {
+	var valueStringUnknownMap map[string]any
+	if err := json.Unmarshal(data, &valueStringUnknownMap); err == nil {
+		t.typ = "StringUnknownMap"
+		t.StringUnknownMap = valueStringUnknownMap
+		return nil
+	}
+	var valueTaskResponseEventDetailsDataOne TaskResponseEventDetailsDataOne
+	if err := json.Unmarshal(data, &valueTaskResponseEventDetailsDataOne); err == nil {
+		t.typ = "TaskResponseEventDetailsDataOne"
+		t.TaskResponseEventDetailsDataOne = valueTaskResponseEventDetailsDataOne
+		return nil
+	}
+	return fmt.Errorf("%s cannot be deserialized as a %T", data, t)
+}
+
+func (t TaskResponseEventDetailsData) MarshalJSON() ([]byte, error) {
+	if t.typ == "StringUnknownMap" || t.StringUnknownMap != nil {
+		return json.Marshal(t.StringUnknownMap)
+	}
+	if t.typ == "TaskResponseEventDetailsDataOne" || t.TaskResponseEventDetailsDataOne != "" {
+		return json.Marshal(t.TaskResponseEventDetailsDataOne)
+	}
+	return nil, fmt.Errorf("type %T does not include a non-empty union type", t)
+}
+
+type TaskResponseEventDetailsDataVisitor interface {
+	VisitStringUnknownMap(map[string]any) error
+	VisitTaskResponseEventDetailsDataOne(TaskResponseEventDetailsDataOne) error
+}
+
+func (t *TaskResponseEventDetailsData) Accept(visitor TaskResponseEventDetailsDataVisitor) error {
+	if t.typ == "StringUnknownMap" || t.StringUnknownMap != nil {
+		return visitor.VisitStringUnknownMap(t.StringUnknownMap)
+	}
+	if t.typ == "TaskResponseEventDetailsDataOne" || t.TaskResponseEventDetailsDataOne != "" {
+		return visitor.VisitTaskResponseEventDetailsDataOne(t.TaskResponseEventDetailsDataOne)
+	}
+	return fmt.Errorf("type %T does not include a non-empty union type", t)
+}
+
+type TaskResponseEventDetailsDataOne string
+
+const (
+	TaskResponseEventDetailsDataOneCancelled TaskResponseEventDetailsDataOne = "cancelled"
+)
+
+func NewTaskResponseEventDetailsDataOneFromString(s string) (TaskResponseEventDetailsDataOne, error) {
+	switch s {
+	case "cancelled":
+		return TaskResponseEventDetailsDataOneCancelled, nil
+	}
+	var t TaskResponseEventDetailsDataOne
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (t TaskResponseEventDetailsDataOne) Ptr() *TaskResponseEventDetailsDataOne {
+	return &t
 }
 
 var (
