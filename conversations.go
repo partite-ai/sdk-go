@@ -631,6 +631,7 @@ func (g *GetRequestEventsRequest) SetRequestID(requestID string) {
 var (
 	getRequestResponseRequestFieldConversationID = big.NewInt(1 << 0)
 	getRequestResponseRequestFieldRequestID      = big.NewInt(1 << 1)
+	getRequestResponseRequestFieldWaitMs         = big.NewInt(1 << 2)
 )
 
 type GetRequestResponseRequest struct {
@@ -638,6 +639,8 @@ type GetRequestResponseRequest struct {
 	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
 	RequestID string `json:"-" url:"-"`
+	// How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
+	WaitMs *int `json:"-" url:"wait_ms,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -666,9 +669,17 @@ func (g *GetRequestResponseRequest) SetRequestID(requestID string) {
 	g.require(getRequestResponseRequestFieldRequestID)
 }
 
+// SetWaitMs sets the WaitMs field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetRequestResponseRequest) SetWaitMs(waitMs *int) {
+	g.WaitMs = waitMs
+	g.require(getRequestResponseRequestFieldWaitMs)
+}
+
 var (
 	getRequestTaskRequestFieldConversationID = big.NewInt(1 << 0)
 	getRequestTaskRequestFieldRequestID      = big.NewInt(1 << 1)
+	getRequestTaskRequestFieldWaitMs         = big.NewInt(1 << 2)
 )
 
 type GetRequestTaskRequest struct {
@@ -676,6 +687,8 @@ type GetRequestTaskRequest struct {
 	ConversationID string `json:"-" url:"-"`
 	// The ID of an existing request
 	RequestID string `json:"-" url:"-"`
+	// How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
+	WaitMs *int `json:"-" url:"wait_ms,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -702,6 +715,13 @@ func (g *GetRequestTaskRequest) SetConversationID(conversationID string) {
 func (g *GetRequestTaskRequest) SetRequestID(requestID string) {
 	g.RequestID = requestID
 	g.require(getRequestTaskRequestFieldRequestID)
+}
+
+// SetWaitMs sets the WaitMs field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetRequestTaskRequest) SetWaitMs(waitMs *int) {
+	g.WaitMs = waitMs
+	g.require(getRequestTaskRequestFieldWaitMs)
 }
 
 var (

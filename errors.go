@@ -69,6 +69,37 @@ func (c *ConflictError) GetBody() *GenericErrorResponse {
 	return c.Body
 }
 
+// Nothing to return yet: the wait ended, or a proxy in front gave up on the connection. Poll again; the call is a GET and safe to repeat. Mesh sends no body and `Retry-After: 0`; a proxy's 504 may carry a body of its own, so ignore the body.
+type GatewayTimeoutError struct {
+	*core.APIError
+	Body any
+}
+
+func (g *GatewayTimeoutError) UnmarshalJSON(data []byte) error {
+	var body any
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	g.StatusCode = 504
+	g.Body = body
+	return nil
+}
+
+func (g *GatewayTimeoutError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(g.Body)
+}
+
+func (g *GatewayTimeoutError) Unwrap() error {
+	return g.APIError
+}
+
+func (g *GatewayTimeoutError) GetBody() any {
+	if g == nil {
+		return nil
+	}
+	return g.Body
+}
+
 // An unexpected error occurred on the server.
 type InternalServerError struct {
 	*core.APIError

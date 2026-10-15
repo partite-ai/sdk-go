@@ -771,7 +771,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-Gets the final response of a request. This will block until the request is complete.
+Gets the final response of a request, waiting until the request is complete. If the request is still running when the wait ends, it answers 504; poll again.
 </dd>
 </dl>
 </dd>
@@ -820,6 +820,14 @@ client.Conversations.GetRequestResponse(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**waitMs:** `*int` — How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
+    
+</dd>
+</dl>
 </dd>
 </dl>
 
@@ -840,7 +848,7 @@ client.Conversations.GetRequestResponse(
 <dl>
 <dd>
 
-If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. It will block until a task is available or the request completes.
+If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. Otherwise it waits until a task is available or the request completes. If neither happens before the wait ends, it answers 504; poll again.
 </dd>
 </dl>
 </dd>
@@ -886,6 +894,14 @@ client.Conversations.GetRequestTask(
 <dd>
 
 **requestID:** `string` — The ID of an existing request
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**waitMs:** `*int` — How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
     
 </dd>
 </dl>

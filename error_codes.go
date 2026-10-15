@@ -33,4 +33,9 @@ var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{
 			APIError: apiError,
 		}
 	},
+	504: func(apiError *core.APIError) error {
+		return &GatewayTimeoutError{
+			APIError: apiError,
+		}
+	},
 }

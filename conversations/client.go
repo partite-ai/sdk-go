@@ -358,7 +358,7 @@ func (c *Client) GetRequestEvents(
 	)
 }
 
-// Gets the final response of a request. This will block until the request is complete.
+// Gets the final response of a request, waiting until the request is complete. If the request is still running when the wait ends, it answers 504; poll again.
 //
 // Example:
 //
@@ -386,7 +386,7 @@ func (c *Client) GetRequestResponse(
 	return response.Body, nil
 }
 
-// If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. It will block until a task is available or the request completes.
+// If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. Otherwise it waits until a task is available or the request completes. If neither happens before the wait ends, it answers 504; poll again.
 //
 // Example:
 //
