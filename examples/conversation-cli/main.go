@@ -4,13 +4,17 @@
 //
 // Usage:
 //
-//	conversation-cli <mesh-id> <intent> <input-json> [<follow-up-input-json>] [--attach <path>]...
+//	conversation-cli <mesh-id>@<version> <intent> <input-json> [<follow-up-input-json>] [--attach <path>]...
+//
+// <version> picks the mesh version: a number is a version number, "draft" is
+// the mesh's draft, and anything else is a version label, e.g. my-mesh@3,
+// my-mesh@draft or my-mesh@prod.
 //
 // Files given with --attach are uploaded with the first request. The input
 // message refers to an attachment by its file name using the
 // attachment://<filename> syntax, e.g. {"question":"summarize attachment://report.pdf"}.
 //
-// Credentials are read from PARTITE_API_KEY_ID and PARTITE_API_KEY_SECRET.
+// The API key is read from PARTITE_API_KEY.
 // Set PARTITE_BASE_URL to talk to a server other than https://api.partite.ai.
 package main
 
@@ -23,6 +27,8 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	partiteai "github.com/partite-ai/sdk-go"
@@ -30,8 +36,10 @@ import (
 	"github.com/partite-ai/sdk-go/option"
 )
 
-const usage = `usage: conversation-cli <mesh-id> <intent> <input-json> [<follow-up-input-json>] [--attach <path>]...
+const usage = `usage: conversation-cli <mesh-id>@<version> <intent> <input-json> [<follow-up-input-json>] [--attach <path>]...
 
+  <version> is a version number, draft, or a version label, e.g. my-mesh@3,
+  my-mesh@draft or my-mesh@prod.
   <input-json> and <follow-up-input-json> must be JSON objects, e.g. '{"question":"hello"}'.
   The follow-up defaults to <input-json>, except when --attach is used: then it is
   required, because attachment:// references only resolve against files uploaded
@@ -57,7 +65,12 @@ func run(argv []string) int {
 		fmt.Fprintln(os.Stderr, usage)
 		return 2
 	}
-	meshID, intent := args[0], args[1]
+	mesh := parseMesh(args[0])
+	if mesh == nil {
+		fmt.Fprintf(os.Stderr, "invalid mesh: %s (expected <mesh-id>@<version>, e.g. my-mesh@3, my-mesh@draft or my-mesh@prod)\n\n%s\n", args[0], usage)
+		return 2
+	}
+	intent := args[1]
 
 	input, err := parseJSONObject(args[2])
 	if err != nil {
@@ -101,9 +114,9 @@ func run(argv []string) int {
 		attachments = append(attachments, partiteai.NewFileParam(file, name, contentType))
 	}
 
-	// 2. Create the client. With no explicit credentials, NewClient reads
-	// PARTITE_API_KEY_ID / PARTITE_API_KEY_SECRET from the environment and
-	// sends them as HTTP Basic auth.
+	// 2. Create the client. With no explicit key, NewClient reads
+	// PARTITE_API_KEY from the environment and sends it as a bearer token;
+	// you can also pass it with option.WithAPIKey.
 	var opts []option.RequestOption
 	if baseURL := os.Getenv("PARTITE_BASE_URL"); baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
@@ -111,23 +124,30 @@ func run(argv []string) int {
 	c := client.NewClient(opts...)
 	ctx := context.Background()
 
-	// 3. Create a conversation together with its first request, uploading
-	// the attachments (one multipart part per file).
-	created, err := c.Conversations.CreateConversationWithInitialRequest(ctx, &partiteai.CreateConversationWithInitialRequestRequest{
-		MeshID:       meshID,
-		IntentName:   intent,
-		InputMessage: input,
-		Attachments:  attachments,
+	// 3. Create a conversation on the mesh version, starting it with a first
+	// request, and upload the attachments (one multipart part per file).
+	created, err := c.Conversations.CreateConversation(ctx, &partiteai.CreateConversationRequest{
+		Params: &partiteai.CreateConversationParams{
+			Mesh:   mesh,
+			Intent: partiteai.String(intent),
+			Input:  input,
+		},
+		Attachments: attachments,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: creating conversation: %v\n", err)
 		return 1
 	}
-	fmt.Printf("conversation: %s\n", created.ConversationID)
-	fmt.Printf("request: %s\n", created.RequestID)
+	fmt.Printf("conversation: %s\n", created.ID)
+	// A conversation created with an input always has the request that input started.
+	if created.Request == nil {
+		fmt.Fprintln(os.Stderr, "error: the conversation was created without a request")
+		return 1
+	}
+	fmt.Printf("request: %s\n", created.Request.ID)
 
 	// 4. Stream the first request's events until it finishes.
-	ok, err := streamRequestEvents(ctx, c, created.ConversationID, created.RequestID)
+	ok, err := streamRequestEvents(ctx, c, created.ID, created.Request.ID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: streaming events: %v\n", err)
 		return 1
@@ -137,20 +157,23 @@ func run(argv []string) int {
 		return 1
 	}
 
-	// 6. Add a follow-up request to the same conversation (no attachments).
-	next, err := c.Conversations.CreateConversationRequest(ctx, &partiteai.CreateConversationRequestRequest{
-		ConversationID: created.ConversationID,
-		IntentName:     intent,
-		InputMessage:   followUp,
+	// 6. Send a follow-up message to the same conversation (no attachments),
+	// which starts another request.
+	next, err := c.Conversations.CreateRequest(ctx, &partiteai.CreateRequestRequest{
+		ConversationID: created.ID,
+		Params: &partiteai.CreateRequestParams{
+			Intent: partiteai.String(intent),
+			Input:  followUp,
+		},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: creating follow-up request: %v\n", err)
 		return 1
 	}
-	fmt.Printf("request: %s\n", next.RequestID)
+	fmt.Printf("request: %s\n", next.ID)
 
 	// 7. Stream the follow-up request's events.
-	ok, err = streamRequestEvents(ctx, c, created.ConversationID, next.RequestID)
+	ok, err = streamRequestEvents(ctx, c, created.ID, next.ID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: streaming events: %v\n", err)
 		return 1
@@ -165,10 +188,10 @@ func run(argv []string) int {
 // at the first terminal event (response, error, cancelled, server_error or task)
 // and closes the stream rather than waiting for the server to close it.
 // It reports true if the request ended with a response.
-func streamRequestEvents(ctx context.Context, c *client.Client, conversationID, requestID string) (bool, error) {
-	stream, err := c.Conversations.GetRequestEvents(ctx, &partiteai.GetRequestEventsRequest{
-		ConversationID: conversationID,
-		RequestID:      requestID,
+func streamRequestEvents(ctx context.Context, c *client.Client, conversation, request string) (bool, error) {
+	stream, err := c.Conversations.StreamRequestEvents(ctx, &partiteai.StreamRequestEventsRequest{
+		ConversationID: conversation,
+		RequestID:      request,
 	})
 	if err != nil {
 		return false, err
@@ -184,8 +207,10 @@ func streamRequestEvents(ctx context.Context, c *client.Client, conversationID, 
 			return false, err
 		}
 
-		// ResponseEventData is a union: Type says which field is populated.
+		// RequestStreamEvent is a union: Type says which field is populated.
 		switch event.Type {
+		case "started":
+			// The first event of every stream; it names the conversation and the request.
 		case "message":
 			fmt.Printf("[message] %s\n", event.Message.Data)
 		case "thinking":
@@ -212,6 +237,38 @@ func streamRequestEvents(ctx context.Context, c *client.Client, conversationID, 
 			// Ignore event types this example doesn't know about.
 		}
 	}
+}
+
+// versionNumber matches a mesh version number.
+var versionNumber = regexp.MustCompile(`^[0-9]+$`)
+
+// parseMesh parses "<mesh-id>@<version>" into the mesh to start the
+// conversation on, or returns nil. The API takes exactly one of a version
+// number, a version label and the draft, so a mesh ID on its own is rejected
+// rather than defaulting to the draft.
+func parseMesh(s string) *partiteai.ConversationMesh {
+	at := strings.LastIndex(s, "@")
+	if at < 0 {
+		return nil
+	}
+	id, version := s[:at], s[at+1:]
+	if id == "" || version == "" {
+		return nil
+	}
+	mesh := &partiteai.ConversationMesh{ID: id}
+	switch {
+	case versionNumber.MatchString(version):
+		n, err := strconv.Atoi(version)
+		if err != nil {
+			return nil
+		}
+		mesh.Version = partiteai.Int(n)
+	case version == "draft":
+		mesh.Draft = partiteai.Bool(true)
+	default:
+		mesh.VersionLabel = partiteai.String(version)
+	}
+	return mesh
 }
 
 // splitArgs separates "--attach <path>" / "--attach=<path>" options from the
