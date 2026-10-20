@@ -13,18 +13,13 @@ var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{
 			APIError: apiError,
 		}
 	},
+	403: func(apiError *core.APIError) error {
+		return &ForbiddenError{
+			APIError: apiError,
+		}
+	},
 	404: func(apiError *core.APIError) error {
 		return &NotFoundError{
-			APIError: apiError,
-		}
-	},
-	409: func(apiError *core.APIError) error {
-		return &ConflictError{
-			APIError: apiError,
-		}
-	},
-	500: func(apiError *core.APIError) error {
-		return &InternalServerError{
 			APIError: apiError,
 		}
 	},
@@ -33,8 +28,23 @@ var ErrorCodes internal.ErrorCodes = internal.ErrorCodes{
 			APIError: apiError,
 		}
 	},
-	504: func(apiError *core.APIError) error {
-		return &GatewayTimeoutError{
+	409: func(apiError *core.APIError) error {
+		return &ConflictError{
+			APIError: apiError,
+		}
+	},
+	413: func(apiError *core.APIError) error {
+		return &ContentTooLargeError{
+			APIError: apiError,
+		}
+	},
+	415: func(apiError *core.APIError) error {
+		return &UnsupportedMediaTypeError{
+			APIError: apiError,
+		}
+	},
+	500: func(apiError *core.APIError) error {
+		return &InternalServerError{
 			APIError: apiError,
 		}
 	},

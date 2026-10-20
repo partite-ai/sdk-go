@@ -3,7 +3,6 @@
 package core
 
 import (
-	base64 "encoding/base64"
 	http "net/http"
 	url "net/url"
 )
@@ -28,8 +27,8 @@ type RequestOptions struct {
 	MaxStreamReconnectAttempts uint
 	DisableStreamReconnection  bool
 	DisableRetries             bool
-	KeyID                      string
-	KeySecret                  string
+	APIKey                     string
+	APIKeyFunc                 func() (string, error)
 }
 
 // NewRequestOptions returns a new *RequestOptions value.
@@ -52,8 +51,12 @@ func NewRequestOptions(opts ...RequestOption) *RequestOptions {
 // for the request(s).
 func (r *RequestOptions) ToHeader() http.Header {
 	header := r.cloneHeader()
-	if r.KeyID != "" || r.KeySecret != "" {
-		header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(r.KeyID+":"+r.KeySecret)))
+	if r.APIKey != "" {
+		header.Set("Authorization", "Bearer "+r.APIKey)
+	} else if r.APIKeyFunc != nil {
+		if token, err := r.APIKeyFunc(); err == nil && token != "" {
+			header.Set("Authorization", "Bearer "+token)
+		}
 	}
 	return header
 }
@@ -62,7 +65,7 @@ func (r *RequestOptions) cloneHeader() http.Header {
 	headers := r.HTTPHeader.Clone()
 	headers.Set("X-Fern-Language", "Go")
 	headers.Set("X-Fern-SDK-Name", "github.com/partite-ai/sdk-go")
-	headers.Set("X-Fern-SDK-Version", "v1.0.0-beta5")
+	headers.Set("X-Fern-SDK-Version", "v1.0.0-beta6")
 	return headers
 }
 
@@ -152,13 +155,20 @@ func (w *WithoutRetriesOption) applyRequestOptions(opts *RequestOptions) {
 	opts.DisableRetries = true
 }
 
-// BasicAuthOption implements the RequestOption interface.
-type BasicAuthOption struct {
-	KeyID     string
-	KeySecret string
+// APIKeyOption implements the RequestOption interface.
+type APIKeyOption struct {
+	APIKey string
 }
 
-func (b *BasicAuthOption) applyRequestOptions(opts *RequestOptions) {
-	opts.KeyID = b.KeyID
-	opts.KeySecret = b.KeySecret
+func (a *APIKeyOption) applyRequestOptions(opts *RequestOptions) {
+	opts.APIKey = a.APIKey
+}
+
+// APIKeyFuncOption implements the RequestOption interface.
+type APIKeyFuncOption struct {
+	APIKeyFunc func() (string, error)
+}
+
+func (a *APIKeyFuncOption) applyRequestOptions(opts *RequestOptions) {
+	opts.APIKeyFunc = a.APIKeyFunc
 }

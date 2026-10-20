@@ -23,11 +23,8 @@ type Client struct {
 
 func NewClient(opts ...option.RequestOption) *Client {
 	options := core.NewRequestOptions(opts...)
-	if options.KeyID == "" {
-		options.KeyID = os.Getenv("PARTITE_API_KEY_ID")
-	}
-	if options.KeySecret == "" {
-		options.KeySecret = os.Getenv("PARTITE_API_KEY_SECRET")
+	if options.APIKey == "" {
+		options.APIKey = os.Getenv("PARTITE_API_KEY")
 	}
 	return &Client{
 		Conversations:        conversations.NewClient(options),

@@ -39,19 +39,14 @@ import (
 
 func do() {
     client := client.NewClient(
-        option.WithBasicAuth(
-            "<username>",
-            "<password>",
+        option.WithAPIKey(
+            "<token>",
         ),
     )
-    request := &partiteai.CreateConversationWithInitialRequestRequest{
-        IntentName: "intent_name",
-        MeshID: "mesh_id",
-        InputMessage: map[string]any{
-            "key": "value",
-        },
+    request := &partiteai.CreateConversationRequest{
+        Params: &partiteai.CreateConversationParams{},
     }
-    client.Conversations.CreateConversationWithInitialRequest(
+    client.Conversations.CreateConversation(
         context.TODO(),
         request,
     )
@@ -75,7 +70,7 @@ Structured error types are returned from API calls that return non-success statu
 with the `errors.Is` and `errors.As` APIs, so you can access the error like so:
 
 ```go
-response, err := client.Conversations.CreateConversationWithInitialRequest(...)
+response, err := client.Conversations.CreateConversation(...)
 if err != nil {
     var apiError *core.APIError
     if errors.As(err, &apiError) {
@@ -100,7 +95,7 @@ specified on the client so that they're applied on every request, or for an indi
 ```go
 // Specify default options applied on every request.
 client := client.NewClient(
-    option.WithBasicAuth("<YOUR_USERNAME>", "<YOUR_PASSWORD>"),
+    option.WithAPIKey("<YOUR_API_KEY>"),
     option.WithHTTPClient(
         &http.Client{
             Timeout: 5 * time.Second,
@@ -109,17 +104,16 @@ client := client.NewClient(
 )
 
 // Specify options for an individual request.
-response, err := client.Conversations.CreateConversationWithInitialRequest(
+response, err := client.Conversations.CreateConversation(
     ...,
-    option.WithBasicAuth("<YOUR_USERNAME>", "<YOUR_PASSWORD>"),
+    option.WithAPIKey("<YOUR_API_KEY>"),
 )
 ```
 
 When credentials are not explicitly provided, the client reads them from the
 following environment variables:
 
-- `PARTITE_API_KEY_ID`
-- `PARTITE_API_KEY_SECRET`
+- `PARTITE_API_KEY`
 
 ## Advanced
 
@@ -132,7 +126,7 @@ endpoint has no request body, a JSON body is created from the given properties. 
 JSON and form URL encoded request bodies; they are not applied to multipart file upload or raw byte requests.
 
 ```go
-response, err := client.Conversations.CreateConversationWithInitialRequest(
+response, err := client.Conversations.CreateConversation(
     ...,
     option.WithBodyProperties(map[string]interface{}{
         "custom_field": "custom-value",
@@ -147,7 +141,7 @@ when you need to examine the response headers received from the API call. (When 
 the raw HTTP response data will be included automatically in the Page response object.)
 
 ```go
-response, err := client.Conversations.WithRawResponse.CreateConversationWithInitialRequest(...)
+response, err := client.Conversations.WithRawResponse.CreateConversation(...)
 if err != nil {
     return err
 }
@@ -185,7 +179,7 @@ client := client.NewClient(
     option.WithMaxAttempts(1),
 )
 
-response, err := client.Conversations.CreateConversationWithInitialRequest(
+response, err := client.Conversations.CreateConversation(
     ...,
     option.WithMaxAttempts(1),
 )
@@ -199,7 +193,7 @@ Setting a timeout for each individual request is as simple as using the standard
 ctx, cancel := context.WithTimeout(ctx, time.Second)
 defer cancel()
 
-response, err := client.Conversations.CreateConversationWithInitialRequest(ctx, ...)
+response, err := client.Conversations.CreateConversation(ctx, ...)
 ```
 
 ### Explicit Null
@@ -221,7 +215,7 @@ type ExampleRequest struct {
 request := &ExampleRequest{}
 request.SetName(nil)
 
-response, err := client.Conversations.CreateConversationWithInitialRequest(ctx, request, ...)
+response, err := client.Conversations.CreateConversation(ctx, request, ...)
 ```
 
 ## Contributing

@@ -250,11 +250,11 @@ func TestSettersNotificationChannelEvent(t *testing.T) {
 		assert.NotNil(t, obj.explicitFields)
 	})
 
-	t.Run("SetOutput", func(t *testing.T) {
+	t.Run("SetEvent", func(t *testing.T) {
 		obj := &NotificationChannelEvent{}
-		var fernTestValueOutput *MessageEventData
-		obj.SetOutput(fernTestValueOutput)
-		assert.Equal(t, fernTestValueOutput, obj.Output)
+		var fernTestValueEvent *RequestEvent
+		obj.SetEvent(fernTestValueEvent)
+		assert.Equal(t, fernTestValueEvent, obj.Event)
 		assert.NotNil(t, obj.explicitFields)
 	})
 
@@ -386,28 +386,28 @@ func TestGettersNotificationChannelEvent(t *testing.T) {
 		_ = obj.GetRequestID() // Should return zero value
 	})
 
-	t.Run("GetOutput", func(t *testing.T) {
+	t.Run("GetEvent", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		obj := &NotificationChannelEvent{}
-		var expected *MessageEventData
-		obj.Output = expected
+		var expected *RequestEvent
+		obj.Event = expected
 
 		// Act & Assert
-		assert.Equal(t, expected, obj.GetOutput(), "getter should return the property value")
+		assert.Equal(t, expected, obj.GetEvent(), "getter should return the property value")
 	})
 
-	t.Run("GetOutput_NilValue", func(t *testing.T) {
+	t.Run("GetEvent_NilValue", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		obj := &NotificationChannelEvent{}
-		obj.Output = nil
+		obj.Event = nil
 
 		// Act & Assert
-		assert.Nil(t, obj.GetOutput(), "getter should return nil when property is nil")
+		assert.Nil(t, obj.GetEvent(), "getter should return nil when property is nil")
 	})
 
-	t.Run("GetOutput_NilReceiver", func(t *testing.T) {
+	t.Run("GetEvent_NilReceiver", func(t *testing.T) {
 		t.Parallel()
 		var obj *NotificationChannelEvent
 		// Should not panic - getters should handle nil receiver gracefully
@@ -416,7 +416,7 @@ func TestGettersNotificationChannelEvent(t *testing.T) {
 				t.Errorf("Getter panicked on nil receiver: %v", r)
 			}
 		}()
-		_ = obj.GetOutput() // Should return zero value
+		_ = obj.GetEvent() // Should return zero value
 	})
 
 }
@@ -577,14 +577,14 @@ func TestSettersMarkExplicitNotificationChannelEvent(t *testing.T) {
 		// It verifies that setting a field via setter allows successful JSON round-trip
 	})
 
-	t.Run("SetOutput_MarksExplicit", func(t *testing.T) {
+	t.Run("SetEvent_MarksExplicit", func(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		obj := &NotificationChannelEvent{}
-		var fernTestValueOutput *MessageEventData
+		var fernTestValueEvent *RequestEvent
 
 		// Act
-		obj.SetOutput(fernTestValueOutput)
+		obj.SetEvent(fernTestValueEvent)
 
 		// Assert - object with explicitly set field can be marshaled/unmarshaled
 		bytes, err := json.Marshal(obj)
@@ -671,7 +671,7 @@ func TestGettersNotificationChannelStreamData(t *testing.T) {
 		t.Parallel()
 		// Arrange
 		obj := &NotificationChannelStreamData{}
-		var expected *ServerErrorEventDetails
+		var expected *ServerErrorEvent
 		obj.ServerError = expected
 
 		// Act & Assert
@@ -698,6 +698,263 @@ func TestGettersNotificationChannelStreamData(t *testing.T) {
 			}
 		}()
 		_ = obj.GetServerError() // Should return zero value
+	})
+
+}
+
+func TestGettersRequestEvent(t *testing.T) {
+	t.Run("GetType", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected string
+		obj.Type = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetType(), "getter should return the property value")
+	})
+
+	t.Run("GetType_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetType() // Should return zero value
+	})
+
+	t.Run("GetTask", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *TaskEvent
+		obj.Task = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetTask(), "getter should return the property value")
+	})
+
+	t.Run("GetTask_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Task = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetTask(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetTask_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetTask() // Should return zero value
+	})
+
+	t.Run("GetTaskResponse", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *TaskResponseEvent
+		obj.TaskResponse = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetTaskResponse(), "getter should return the property value")
+	})
+
+	t.Run("GetTaskResponse_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.TaskResponse = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetTaskResponse(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetTaskResponse_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetTaskResponse() // Should return zero value
+	})
+
+	t.Run("GetMessage", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *MessageEvent
+		obj.Message = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetMessage(), "getter should return the property value")
+	})
+
+	t.Run("GetMessage_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Message = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetMessage(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetMessage_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetMessage() // Should return zero value
+	})
+
+	t.Run("GetThinking", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *ThinkingEvent
+		obj.Thinking = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetThinking(), "getter should return the property value")
+	})
+
+	t.Run("GetThinking_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Thinking = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetThinking(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetThinking_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetThinking() // Should return zero value
+	})
+
+	t.Run("GetResponse", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *ResponseEvent
+		obj.Response = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetResponse(), "getter should return the property value")
+	})
+
+	t.Run("GetResponse_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Response = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetResponse(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetResponse_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetResponse() // Should return zero value
+	})
+
+	t.Run("GetError", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *ErrorEvent
+		obj.Error = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetError(), "getter should return the property value")
+	})
+
+	t.Run("GetError_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Error = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetError(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetError_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetError() // Should return zero value
+	})
+
+	t.Run("GetCancelled", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		var expected *CancelledEvent
+		obj.Cancelled = expected
+
+		// Act & Assert
+		assert.Equal(t, expected, obj.GetCancelled(), "getter should return the property value")
+	})
+
+	t.Run("GetCancelled_NilValue", func(t *testing.T) {
+		t.Parallel()
+		// Arrange
+		obj := &RequestEvent{}
+		obj.Cancelled = nil
+
+		// Act & Assert
+		assert.Nil(t, obj.GetCancelled(), "getter should return nil when property is nil")
+	})
+
+	t.Run("GetCancelled_NilReceiver", func(t *testing.T) {
+		t.Parallel()
+		var obj *RequestEvent
+		// Should not panic - getters should handle nil receiver gracefully
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Getter panicked on nil receiver: %v", r)
+			}
+		}()
+		_ = obj.GetCancelled() // Should return zero value
 	})
 
 }

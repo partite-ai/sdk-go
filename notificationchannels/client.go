@@ -22,11 +22,8 @@ type Client struct {
 }
 
 func NewClient(options *core.RequestOptions) *Client {
-	if options.KeyID == "" {
-		options.KeyID = os.Getenv("PARTITE_API_KEY_ID")
-	}
-	if options.KeySecret == "" {
-		options.KeySecret = os.Getenv("PARTITE_API_KEY_SECRET")
+	if options.APIKey == "" {
+		options.APIKey = os.Getenv("PARTITE_API_KEY")
 	}
 	return &Client{
 		WithRawResponse: NewRawClient(options),
@@ -42,7 +39,7 @@ func NewClient(options *core.RequestOptions) *Client {
 	}
 }
 
-// Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
+// Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
 //
 // Example:
 //

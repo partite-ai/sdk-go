@@ -1,6 +1,6 @@
 # Reference
 ## Conversations
-<details><summary><code>client.Conversations.CreateEmptyConversation(request) -> *partiteai.CreateConversationResponse</code></summary>
+<details><summary><code>client.Conversations.CreateConversation(request) -> *partiteai.CreatedConversation</code></summary>
 <dl>
 <dd>
 
@@ -12,7 +12,7 @@
 <dl>
 <dd>
 
-Creates a new conversation, without specifying an initial request or assets. If neither the version_ordinal nor version_label query parameters are provided, the draft version of the mesh will be used.
+Starts a conversation on a mesh version or a route. With `input`, it also sends the first message, and answers like sending a message does: `wait` and a streaming `Accept` apply to that first request. An external ID already in use is a 409.
 </dd>
 </dl>
 </dd>
@@ -27,10 +27,10 @@ Creates a new conversation, without specifying an initial request or assets. If 
 <dd>
 
 ```go
-request := &partiteai.CreateEmptyConversationRequest{
-    MeshID: "mesh_id",
+request := &partiteai.CreateConversationRequest{
+    Params: &partiteai.CreateConversationParams{},
 }
-client.Conversations.CreateEmptyConversation(
+client.Conversations.CreateConversation(
     context.TODO(),
     request,
 )
@@ -48,219 +48,7 @@ client.Conversations.CreateEmptyConversation(
 <dl>
 <dd>
 
-**meshID:** `string` — The ID of the Mesh for which to create a conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionOrdinal:** `*int` — The version number of a mesh version for which to create the conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionLabel:** `*string` — The version label of a mesh version for which to create the conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**tags:** `[]*partiteai.Tag` — Tags to apply to the conversation.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**externalID:** `*string` — Optional client-chosen external ID for the new conversation: 1 to 255 bytes. Immutable and unique (per organization). Use `GET /conversations/lookup/external-id/{external_id}` to find the conversation again.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**notificationChannel:** `*string` — Optional notification channel for the new conversation: 1 to 255 bytes. Every request output the conversation writes is also appended to this channel, readable via `GET /notification-channels/{notification_channel_id}/events`. The channel is created implicitly on first use and cannot be changed later.
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**tracingEnabled:** `*bool` — Optional. `false` turns off tracing for the new conversation, so the mesh records no trace for any of its requests. Defaults to `true`. Cannot be changed later.
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.Conversations.GetIntentsForNewConversation() -> *partiteai.ListIntentsResponse</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Retrieves the list of intents defined on a particular mesh version for which a new conversation can be started.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```go
-request := &partiteai.GetIntentsForNewConversationRequest{
-    MeshID: "mesh_id",
-}
-client.Conversations.GetIntentsForNewConversation(
-    context.TODO(),
-    request,
-)
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**meshID:** `string` — The ID of the Mesh for which to get intents
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionOrdinal:** `*int` — The version number of a mesh version for which to get intents
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionLabel:** `*string` — The version label of a mesh version for which to get intents
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.Conversations.CreateConversationWithInitialRequest(IntentName, request) -> *partiteai.CreateRequestResponse</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Creates a new conversation, specifying an initial request and attachments to start the conversation. If neither the version_ordinal nor version_label query parameters are provided, the draft version of the mesh will be used.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```go
-request := &partiteai.CreateConversationWithInitialRequestRequest{
-    IntentName: "intent_name",
-    MeshID: "mesh_id",
-    InputMessage: map[string]any{
-        "key": "value",
-    },
-}
-client.Conversations.CreateConversationWithInitialRequest(
-    context.TODO(),
-    request,
-)
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**intentName:** `string` — The name of the Intent defined on the target mesh which will be used to start the conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**meshID:** `string` — The ID of the Mesh for which to create a conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionOrdinal:** `*int` — The version number of a mesh version for which to create the conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**versionLabel:** `*string` — The version label of a mesh version for which to create the conversation
+**wait:** `*int` — Seconds to hold the answer until the request leaves `running`. A wait longer than 50 seconds is shortened to 50.
     
 </dd>
 </dl>
@@ -276,20 +64,6 @@ client.Conversations.CreateConversationWithInitialRequest(
 <dl>
 <dd>
 
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Returns the conversation.
-</dd>
-</dl>
-</dd>
-</dl>
-
 #### 🔌 Usage
 
 <dl>
@@ -300,7 +74,7 @@ Returns the conversation.
 
 ```go
 request := &partiteai.GetConversationRequest{
-    ConversationID: "conversation_id",
+    ConversationID: "extid=thread-42",
 }
 client.Conversations.GetConversation(
     context.TODO(),
@@ -320,7 +94,7 @@ client.Conversations.GetConversation(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -332,7 +106,7 @@ client.Conversations.GetConversation(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetIntentsForConversation(ConversationID) -> *partiteai.ListIntentsResponse</code></summary>
+<details><summary><code>client.Conversations.ListIntents(ConversationID) -> *partiteai.ListIntentsResponse</code></summary>
 <dl>
 <dd>
 
@@ -344,7 +118,7 @@ client.Conversations.GetConversation(
 <dl>
 <dd>
 
-Retrieves the list of intents associated with a particular conversation.
+The intents of the mesh version the conversation runs on, with the schema of the input each takes and of the responses each gives. An intent the caller's boundaries don't allow is left out.
 </dd>
 </dl>
 </dd>
@@ -359,10 +133,10 @@ Retrieves the list of intents associated with a particular conversation.
 <dd>
 
 ```go
-request := &partiteai.GetIntentsForConversationRequest{
-    ConversationID: "conversation_id",
+request := &partiteai.ListIntentsRequest{
+    ConversationID: "extid=thread-42",
 }
-client.Conversations.GetIntentsForConversation(
+client.Conversations.ListIntents(
     context.TODO(),
     request,
 )
@@ -380,7 +154,7 @@ client.Conversations.GetIntentsForConversation(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -392,7 +166,7 @@ client.Conversations.GetIntentsForConversation(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CreateConversationRequest(ConversationID, IntentName, request) -> *partiteai.CreateRequestResponse</code></summary>
+<details><summary><code>client.Conversations.ListRequests(ConversationID) -> *partiteai.ListRequestsResponse</code></summary>
 <dl>
 <dd>
 
@@ -404,7 +178,7 @@ client.Conversations.GetIntentsForConversation(
 <dl>
 <dd>
 
-Adds a request specified in JSON to an existing conversation.
+Every request of the conversation, oldest first.
 </dd>
 </dl>
 </dd>
@@ -419,14 +193,75 @@ Adds a request specified in JSON to an existing conversation.
 <dd>
 
 ```go
-request := &partiteai.CreateConversationRequestRequest{
-    ConversationID: "conversation_id",
-    IntentName: "intent_name",
-    InputMessage: map[string]any{
-        "key": "value",
+request := &partiteai.ListRequestsRequest{
+    ConversationID: "extid=thread-42",
+}
+client.Conversations.ListRequests(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.Conversations.CreateRequest(ConversationID, request) -> *partiteai.Request</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Sends a message to the conversation, which starts a request.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.CreateRequestRequest{
+    ConversationID: "extid=thread-42",
+    Params: &partiteai.CreateRequestParams{
+        Input: map[string]any{
+            "key": "value",
+        },
     },
 }
-client.Conversations.CreateConversationRequest(
+client.Conversations.CreateRequest(
     context.TODO(),
     request,
 )
@@ -444,7 +279,7 @@ client.Conversations.CreateConversationRequest(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -452,7 +287,7 @@ client.Conversations.CreateConversationRequest(
 <dl>
 <dd>
 
-**intentName:** `string` — The name of the Intent defined on the target mesh which will be used for this request
+**wait:** `*int` — Seconds to hold the answer until the request leaves `running`. A wait longer than 50 seconds is shortened to 50.
     
 </dd>
 </dl>
@@ -464,7 +299,7 @@ client.Conversations.CreateConversationRequest(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetConversationRequests(ConversationID) -> *partiteai.GetConversationRequestsResponse</code></summary>
+<details><summary><code>client.Conversations.GetRequest(ConversationID, RequestID) -> *partiteai.Request</code></summary>
 <dl>
 <dd>
 
@@ -476,7 +311,7 @@ client.Conversations.CreateConversationRequest(
 <dl>
 <dd>
 
-Retrieves a list of requests that have been made within a particular conversation.
+The request's state. With `?wait=N`, the answer waits until the request leaves `running`, for up to N seconds; a request still running then is reported as `running`.
 </dd>
 </dl>
 </dd>
@@ -491,10 +326,11 @@ Retrieves a list of requests that have been made within a particular conversatio
 <dd>
 
 ```go
-request := &partiteai.GetConversationRequestsRequest{
-    ConversationID: "conversation_id",
+request := &partiteai.GetRequestRequest{
+    ConversationID: "extid=thread-42",
+    RequestID: "request_id",
 }
-client.Conversations.GetConversationRequests(
+client.Conversations.GetRequest(
     context.TODO(),
     request,
 )
@@ -512,7 +348,23 @@ client.Conversations.GetConversationRequests(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**requestID:** `string` — The ID of a request of the conversation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**wait:** `*int` — Seconds to hold the answer until the request leaves `running`. A wait longer than 50 seconds is shortened to 50.
     
 </dd>
 </dl>
@@ -524,7 +376,7 @@ client.Conversations.GetConversationRequests(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CancelRequest(ConversationID, RequestID) -> error</code></summary>
+<details><summary><code>client.Conversations.StreamRequestEvents(ConversationID, RequestID) -> partiteai.RequestStreamEvent</code></summary>
 <dl>
 <dd>
 
@@ -536,7 +388,84 @@ client.Conversations.GetConversationRequests(
 <dl>
 <dd>
 
-Cancels execution of a previously submitted request. Processing will be stopped at the next checkpoint, and the request will have a cancellation event added to its output.
+The request's events: a `started` event, then every stored event from the first, or from after `Last-Event-ID`, live until the request ends. A stream does not end while the request waits on a task. In SSE, each event's `event:` line is its `type` (`request_error` for an `error`) and its `data:` is the event; in JSON Lines, each line is the event. The `started` event has no ID, so it never changes where a resumed stream starts.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.StreamRequestEventsRequest{
+    ConversationID: "extid=thread-42",
+    RequestID: "request_id",
+}
+client.Conversations.StreamRequestEvents(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**requestID:** `string` — The ID of a request of the conversation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**lastEventID:** `*string` — The ID of the last event received. The stream starts after it.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.Conversations.CancelRequest(ConversationID, RequestID) -> *partiteai.Request</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Cancels the request at once: it is `cancelled` in the answer. Work already in flight is dropped at the mesh's next checkpoint, though a tool call already sent may still have its effect. Cancelling a request that has ended answers with its final state.
 </dd>
 </dl>
 </dd>
@@ -552,7 +481,7 @@ Cancels execution of a previously submitted request. Processing will be stopped 
 
 ```go
 request := &partiteai.CancelRequestRequest{
-    ConversationID: "conversation_id",
+    ConversationID: "extid=thread-42",
     RequestID: "request_id",
 }
 client.Conversations.CancelRequest(
@@ -573,7 +502,7 @@ client.Conversations.CancelRequest(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -581,7 +510,7 @@ client.Conversations.CancelRequest(
 <dl>
 <dd>
 
-**requestID:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of a request of the conversation.
     
 </dd>
 </dl>
@@ -593,7 +522,7 @@ client.Conversations.CancelRequest(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.CompleteTask(ConversationID, RequestID, TaskID, request) -> error</code></summary>
+<details><summary><code>client.Conversations.CompleteTask(ConversationID, RequestID, TaskID, request) -> *partiteai.Request</code></summary>
 <dl>
 <dd>
 
@@ -605,7 +534,7 @@ client.Conversations.CancelRequest(
 <dl>
 <dd>
 
-Used to submit the results of a task event that previously appeared as an output on the request.
+Answers an open task of the request. The body is the task's response and must match the task's `response_schema`; a response that does not is a 400 and leaves the task open. A `tool_call_approval` is answered with `{"approved": true}` to let the call go ahead, or with `approved` false to decline it, optionally with a `comment` for the agent.
 </dd>
 </dl>
 </dd>
@@ -621,7 +550,7 @@ Used to submit the results of a task event that previously appeared as an output
 
 ```go
 request := &partiteai.CompleteTaskRequest{
-    ConversationID: "conversation_id",
+    ConversationID: "extid=thread-42",
     RequestID: "request_id",
     TaskID: "task_id",
     Body: map[string]any{
@@ -646,7 +575,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -654,7 +583,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**requestID:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of a request of the conversation.
     
 </dd>
 </dl>
@@ -662,7 +591,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**taskID:** `string` — The ID of the task to complete
+**taskID:** `string` — The ID of an open task of the request.
     
 </dd>
 </dl>
@@ -670,7 +599,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-**request:** `map[string]any` — An object conforming to the task's `output_schema`.
+**request:** `map[string]any` — An object that matches the task's `response_schema`.
     
 </dd>
 </dl>
@@ -682,7 +611,7 @@ client.Conversations.CompleteTask(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestEvents(ConversationID, RequestID) -> partiteai.ResponseEventData</code></summary>
+<details><summary><code>client.Conversations.CancelTask(ConversationID, RequestID, TaskID) -> *partiteai.Request</code></summary>
 <dl>
 <dd>
 
@@ -694,7 +623,7 @@ client.Conversations.CompleteTask(
 <dl>
 <dd>
 
-Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking. The Accept header selects the format: `text/event-stream` streams as SSE, and `application/x-ndjson` or `application/jsonl` streams as JSON lines. With no Accept header, or `* /*`, the format is `text/event-stream`. An Accept header that allows none of these returns 406.
+Declines an open task, and the request goes on. For a `client_task`, the tool call that started it returns an error to the agent. For a `tool_call_approval`, the call is declined, as if it was answered with `approved` false.
 </dd>
 </dl>
 </dd>
@@ -709,11 +638,12 @@ Gets the results of a request, as a stream of events. This allows for real-time 
 <dd>
 
 ```go
-request := &partiteai.GetRequestEventsRequest{
-    ConversationID: "conversation_id",
+request := &partiteai.CancelTaskRequest{
+    ConversationID: "extid=thread-42",
     RequestID: "request_id",
+    TaskID: "task_id",
 }
-client.Conversations.GetRequestEvents(
+client.Conversations.CancelTask(
     context.TODO(),
     request,
 )
@@ -731,7 +661,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -739,7 +669,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**requestID:** `string` — The ID of an existing request
+**requestID:** `string` — The ID of a request of the conversation.
     
 </dd>
 </dl>
@@ -747,7 +677,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-**lastEventID:** `*string` — The ID of the last event received. If provided, the stream will start from the next event after this ID.
+**taskID:** `string` — The ID of an open task of the request.
     
 </dd>
 </dl>
@@ -759,7 +689,7 @@ client.Conversations.GetRequestEvents(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestResponse(ConversationID, RequestID) -> map[string]any</code></summary>
+<details><summary><code>client.Conversations.ListResources(ConversationID) -> *partiteai.ResourceList</code></summary>
 <dl>
 <dd>
 
@@ -771,7 +701,7 @@ client.Conversations.GetRequestEvents(
 <dl>
 <dd>
 
-Gets the final response of a request, waiting until the request is complete. If the request is still running when the wait ends, it answers 504; poll again.
+Everything the conversation holds, in the order it entered, including what MCP servers and other activity added.
 </dd>
 </dl>
 </dd>
@@ -786,11 +716,10 @@ Gets the final response of a request, waiting until the request is complete. If 
 <dd>
 
 ```go
-request := &partiteai.GetRequestResponseRequest{
-    ConversationID: "conversation_id",
-    RequestID: "request_id",
+request := &partiteai.ListResourcesRequest{
+    ConversationID: "extid=thread-42",
 }
-client.Conversations.GetRequestResponse(
+client.Conversations.ListResources(
     context.TODO(),
     request,
 )
@@ -808,23 +737,7 @@ client.Conversations.GetRequestResponse(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**requestID:** `string` — The ID of an existing request
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**waitMs:** `*int` — How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -836,7 +749,7 @@ client.Conversations.GetRequestResponse(
 </dl>
 </details>
 
-<details><summary><code>client.Conversations.GetRequestTask(ConversationID, RequestID) -> *partiteai.GetTaskResponse</code></summary>
+<details><summary><code>client.Conversations.AddResources(ConversationID, request) -> *partiteai.ResourceList</code></summary>
 <dl>
 <dd>
 
@@ -848,7 +761,7 @@ client.Conversations.GetRequestResponse(
 <dl>
 <dd>
 
-If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. Otherwise it waits until a task is available or the request completes. If neither happens before the wait ends, it answers 504; poll again.
+Each file part becomes a resource of the conversation, which later inputs can refer to by its `reference`.
 </dd>
 </dl>
 </dd>
@@ -863,11 +776,10 @@ If the request is currently waiting for a task to be completed, this endpoint wi
 <dd>
 
 ```go
-request := &partiteai.GetRequestTaskRequest{
-    ConversationID: "conversation_id",
-    RequestID: "request_id",
+request := &partiteai.AddResourcesRequest{
+    ConversationID: "extid=thread-42",
 }
-client.Conversations.GetRequestTask(
+client.Conversations.AddResources(
     context.TODO(),
     request,
 )
@@ -885,143 +797,7 @@ client.Conversations.GetRequestTask(
 <dl>
 <dd>
 
-**conversationID:** `string` — The ID of an existing conversation
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**requestID:** `string` — The ID of an existing request
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**waitMs:** `*int` — How long to wait, in milliseconds, before answering 504. Defaults to 30000. A longer wait is shortened to 50000, so a proxy in front never sees a silent connection for a minute.
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.Conversations.AttachAssetsToConversation(ConversationID, request) -> *partiteai.AttachAssetsToConversationResponse</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Adds assets to an existing conversation.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```go
-request := &partiteai.AttachAssetsToConversationRequest{
-    ConversationID: "conversation_id",
-}
-client.Conversations.AttachAssetsToConversation(
-    context.TODO(),
-    request,
-)
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**conversationID:** `string` — The ID of an existing conversation
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-<details><summary><code>client.Conversations.GetConversationByExternalID(ExternalID) -> *partiteai.Conversation</code></summary>
-<dl>
-<dd>
-
-#### 📝 Description
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-Returns the conversation that was created with the given `external_id`.
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```go
-request := &partiteai.GetConversationByExternalIDRequest{
-    ExternalID: "external_id",
-}
-client.Conversations.GetConversationByExternalID(
-    context.TODO(),
-    request,
-)
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**externalID:** `string` — The external ID supplied when the conversation was created.
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
     
 </dd>
 </dl>
@@ -1046,7 +822,7 @@ client.Conversations.GetConversationByExternalID(
 <dl>
 <dd>
 
-Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/x-ndjson` or `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
+Reads the event queue of a notification channel. Every request output of every conversation created with this channel appears here, across conversations, in a single resumable sequence. The Accept header selects the mode: `text/event-stream` streams as SSE, `application/jsonl` streams as JSON lines, and `application/json` returns one page and closes. With no Accept header, or `* /*`, the mode is `text/event-stream`. An Accept header that allows none of these returns 406. A channel that has not been created returns 404. A created channel with no events reads as empty; streams wait for the first event.
 </dd>
 </dl>
 </dd>

@@ -22,11 +22,8 @@ type Client struct {
 }
 
 func NewClient(options *core.RequestOptions) *Client {
-	if options.KeyID == "" {
-		options.KeyID = os.Getenv("PARTITE_API_KEY_ID")
-	}
-	if options.KeySecret == "" {
-		options.KeySecret = os.Getenv("PARTITE_API_KEY_SECRET")
+	if options.APIKey == "" {
+		options.APIKey = os.Getenv("PARTITE_API_KEY")
 	}
 	return &Client{
 		WithRawResponse: NewRawClient(options),
@@ -42,23 +39,23 @@ func NewClient(options *core.RequestOptions) *Client {
 	}
 }
 
-// Creates a new conversation, without specifying an initial request or assets. If neither the version_ordinal nor version_label query parameters are provided, the draft version of the mesh will be used.
+// Starts a conversation on a mesh version or a route. With `input`, it also sends the first message, and answers like sending a message does: `wait` and a streaming `Accept` apply to that first request. An external ID already in use is a 409.
 //
 // Example:
 //
-//	request := &partiteai.CreateEmptyConversationRequest{
-//	    MeshID: "mesh_id",
+//	request := &partiteai.CreateConversationRequest{
+//	    Params: &partiteai.CreateConversationParams{},
 //	}
-//	client.Conversations.CreateEmptyConversation(
+//	client.Conversations.CreateConversation(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) CreateEmptyConversation(
+func (c *Client) CreateConversation(
 	ctx context.Context,
-	request *partiteai.CreateEmptyConversationRequest,
+	request *partiteai.CreateConversationRequest,
 	opts ...option.RequestOption,
-) (*partiteai.CreateConversationResponse, error) {
-	response, err := c.WithRawResponse.CreateEmptyConversation(
+) (*partiteai.CreatedConversation, error) {
+	response, err := c.WithRawResponse.CreateConversation(
 		ctx,
 		request,
 		opts...,
@@ -69,70 +66,10 @@ func (c *Client) CreateEmptyConversation(
 	return response.Body, nil
 }
 
-// Retrieves the list of intents defined on a particular mesh version for which a new conversation can be started.
-//
-// Example:
-//
-//	request := &partiteai.GetIntentsForNewConversationRequest{
-//	    MeshID: "mesh_id",
-//	}
-//	client.Conversations.GetIntentsForNewConversation(
-//	    context.TODO(),
-//	    request,
-//	)
-func (c *Client) GetIntentsForNewConversation(
-	ctx context.Context,
-	request *partiteai.GetIntentsForNewConversationRequest,
-	opts ...option.RequestOption,
-) (*partiteai.ListIntentsResponse, error) {
-	response, err := c.WithRawResponse.GetIntentsForNewConversation(
-		ctx,
-		request,
-		opts...,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return response.Body, nil
-}
-
-// Creates a new conversation, specifying an initial request and attachments to start the conversation. If neither the version_ordinal nor version_label query parameters are provided, the draft version of the mesh will be used.
-//
-// Example:
-//
-//	request := &partiteai.CreateConversationWithInitialRequestRequest{
-//	    IntentName: "intent_name",
-//	    MeshID: "mesh_id",
-//	    InputMessage: map[string]any{
-//	        "key": "value",
-//	    },
-//	}
-//	client.Conversations.CreateConversationWithInitialRequest(
-//	    context.TODO(),
-//	    request,
-//	)
-func (c *Client) CreateConversationWithInitialRequest(
-	ctx context.Context,
-	request *partiteai.CreateConversationWithInitialRequestRequest,
-	opts ...option.RequestOption,
-) (*partiteai.CreateRequestResponse, error) {
-	response, err := c.WithRawResponse.CreateConversationWithInitialRequest(
-		ctx,
-		request,
-		opts...,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return response.Body, nil
-}
-
-// Returns the conversation.
-//
 // Example:
 //
 //	request := &partiteai.GetConversationRequest{
-//	    ConversationID: "conversation_id",
+//	    ConversationID: "extid=thread-42",
 //	}
 //	client.Conversations.GetConversation(
 //	    context.TODO(),
@@ -154,23 +91,23 @@ func (c *Client) GetConversation(
 	return response.Body, nil
 }
 
-// Retrieves the list of intents associated with a particular conversation.
+// The intents of the mesh version the conversation runs on, with the schema of the input each takes and of the responses each gives. An intent the caller's boundaries don't allow is left out.
 //
 // Example:
 //
-//	request := &partiteai.GetIntentsForConversationRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.ListIntentsRequest{
+//	    ConversationID: "extid=thread-42",
 //	}
-//	client.Conversations.GetIntentsForConversation(
+//	client.Conversations.ListIntents(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) GetIntentsForConversation(
+func (c *Client) ListIntents(
 	ctx context.Context,
-	request *partiteai.GetIntentsForConversationRequest,
+	request *partiteai.ListIntentsRequest,
 	opts ...option.RequestOption,
 ) (*partiteai.ListIntentsResponse, error) {
-	response, err := c.WithRawResponse.GetIntentsForConversation(
+	response, err := c.WithRawResponse.ListIntents(
 		ctx,
 		request,
 		opts...,
@@ -181,27 +118,55 @@ func (c *Client) GetIntentsForConversation(
 	return response.Body, nil
 }
 
-// Adds a request specified in JSON to an existing conversation.
+// Every request of the conversation, oldest first.
 //
 // Example:
 //
-//	request := &partiteai.CreateConversationRequestRequest{
-//	    ConversationID: "conversation_id",
-//	    IntentName: "intent_name",
-//	    InputMessage: map[string]any{
-//	        "key": "value",
+//	request := &partiteai.ListRequestsRequest{
+//	    ConversationID: "extid=thread-42",
+//	}
+//	client.Conversations.ListRequests(
+//	    context.TODO(),
+//	    request,
+//	)
+func (c *Client) ListRequests(
+	ctx context.Context,
+	request *partiteai.ListRequestsRequest,
+	opts ...option.RequestOption,
+) (*partiteai.ListRequestsResponse, error) {
+	response, err := c.WithRawResponse.ListRequests(
+		ctx,
+		request,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return response.Body, nil
+}
+
+// Sends a message to the conversation, which starts a request.
+//
+// Example:
+//
+//	request := &partiteai.CreateRequestRequest{
+//	    ConversationID: "extid=thread-42",
+//	    Params: &partiteai.CreateRequestParams{
+//	        Input: map[string]any{
+//	            "key": "value",
+//	        },
 //	    },
 //	}
-//	client.Conversations.CreateConversationRequest(
+//	client.Conversations.CreateRequest(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) CreateConversationRequest(
+func (c *Client) CreateRequest(
 	ctx context.Context,
-	request *partiteai.CreateConversationRequestRequest,
+	request *partiteai.CreateRequestRequest,
 	opts ...option.RequestOption,
-) (*partiteai.CreateRequestResponse, error) {
-	response, err := c.WithRawResponse.CreateConversationRequest(
+) (*partiteai.Request, error) {
+	response, err := c.WithRawResponse.CreateRequest(
 		ctx,
 		request,
 		opts...,
@@ -212,23 +177,24 @@ func (c *Client) CreateConversationRequest(
 	return response.Body, nil
 }
 
-// Retrieves a list of requests that have been made within a particular conversation.
+// The request's state. With `?wait=N`, the answer waits until the request leaves `running`, for up to N seconds; a request still running then is reported as `running`.
 //
 // Example:
 //
-//	request := &partiteai.GetConversationRequestsRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.GetRequestRequest{
+//	    ConversationID: "extid=thread-42",
+//	    RequestID: "request_id",
 //	}
-//	client.Conversations.GetConversationRequests(
+//	client.Conversations.GetRequest(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) GetConversationRequests(
+func (c *Client) GetRequest(
 	ctx context.Context,
-	request *partiteai.GetConversationRequestsRequest,
+	request *partiteai.GetRequestRequest,
 	opts ...option.RequestOption,
-) (*partiteai.GetConversationRequestsResponse, error) {
-	response, err := c.WithRawResponse.GetConversationRequests(
+) (*partiteai.Request, error) {
+	response, err := c.WithRawResponse.GetRequest(
 		ctx,
 		request,
 		opts...,
@@ -239,83 +205,23 @@ func (c *Client) GetConversationRequests(
 	return response.Body, nil
 }
 
-// Cancels execution of a previously submitted request. Processing will be stopped at the next checkpoint, and the request will have a cancellation event added to its output.
+// The request's events: a `started` event, then every stored event from the first, or from after `Last-Event-ID`, live until the request ends. A stream does not end while the request waits on a task. In SSE, each event's `event:` line is its `type` (`request_error` for an `error`) and its `data:` is the event; in JSON Lines, each line is the event. The `started` event has no ID, so it never changes where a resumed stream starts.
 //
 // Example:
 //
-//	request := &partiteai.CancelRequestRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.StreamRequestEventsRequest{
+//	    ConversationID: "extid=thread-42",
 //	    RequestID: "request_id",
 //	}
-//	client.Conversations.CancelRequest(
+//	client.Conversations.StreamRequestEvents(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) CancelRequest(
+func (c *Client) StreamRequestEvents(
 	ctx context.Context,
-	request *partiteai.CancelRequestRequest,
+	request *partiteai.StreamRequestEventsRequest,
 	opts ...option.RequestOption,
-) error {
-	_, err := c.WithRawResponse.CancelRequest(
-		ctx,
-		request,
-		opts...,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Used to submit the results of a task event that previously appeared as an output on the request.
-//
-// Example:
-//
-//	request := &partiteai.CompleteTaskRequest{
-//	    ConversationID: "conversation_id",
-//	    RequestID: "request_id",
-//	    TaskID: "task_id",
-//	    Body: map[string]any{
-//	        "key": "value",
-//	    },
-//	}
-//	client.Conversations.CompleteTask(
-//	    context.TODO(),
-//	    request,
-//	)
-func (c *Client) CompleteTask(
-	ctx context.Context,
-	request *partiteai.CompleteTaskRequest,
-	opts ...option.RequestOption,
-) error {
-	_, err := c.WithRawResponse.CompleteTask(
-		ctx,
-		request,
-		opts...,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Gets the results of a request, as a stream of events. This allows for real-time updates and progress tracking. The Accept header selects the format: `text/event-stream` streams as SSE, and `application/x-ndjson` or `application/jsonl` streams as JSON lines. With no Accept header, or `* /*`, the format is `text/event-stream`. An Accept header that allows none of these returns 406.
-//
-// Example:
-//
-//	request := &partiteai.GetRequestEventsRequest{
-//	    ConversationID: "conversation_id",
-//	    RequestID: "request_id",
-//	}
-//	client.Conversations.GetRequestEvents(
-//	    context.TODO(),
-//	    request,
-//	)
-func (c *Client) GetRequestEvents(
-	ctx context.Context,
-	request *partiteai.GetRequestEventsRequest,
-	opts ...option.RequestOption,
-) (*core.Stream[partiteai.ResponseEventData], error) {
+) (*core.Stream[partiteai.RequestStreamEvent], error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
@@ -335,7 +241,7 @@ func (c *Client) GetRequestEvents(
 		headers.Add("Last-Event-ID", *request.LastEventID)
 	}
 	headers.Add("Accept", "text/event-stream")
-	streamer := internal.NewStreamer[partiteai.ResponseEventData](c.caller)
+	streamer := internal.NewStreamer[partiteai.RequestStreamEvent](c.caller)
 	return streamer.Stream(
 		ctx,
 		&internal.StreamParams{
@@ -358,24 +264,24 @@ func (c *Client) GetRequestEvents(
 	)
 }
 
-// Gets the final response of a request, waiting until the request is complete. If the request is still running when the wait ends, it answers 504; poll again.
+// Cancels the request at once: it is `cancelled` in the answer. Work already in flight is dropped at the mesh's next checkpoint, though a tool call already sent may still have its effect. Cancelling a request that has ended answers with its final state.
 //
 // Example:
 //
-//	request := &partiteai.GetRequestResponseRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.CancelRequestRequest{
+//	    ConversationID: "extid=thread-42",
 //	    RequestID: "request_id",
 //	}
-//	client.Conversations.GetRequestResponse(
+//	client.Conversations.CancelRequest(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) GetRequestResponse(
+func (c *Client) CancelRequest(
 	ctx context.Context,
-	request *partiteai.GetRequestResponseRequest,
+	request *partiteai.CancelRequestRequest,
 	opts ...option.RequestOption,
-) (map[string]any, error) {
-	response, err := c.WithRawResponse.GetRequestResponse(
+) (*partiteai.Request, error) {
+	response, err := c.WithRawResponse.CancelRequest(
 		ctx,
 		request,
 		opts...,
@@ -386,24 +292,28 @@ func (c *Client) GetRequestResponse(
 	return response.Body, nil
 }
 
-// If the request is currently waiting for a task to be completed, this endpoint will return the details of the task. Otherwise it waits until a task is available or the request completes. If neither happens before the wait ends, it answers 504; poll again.
+// Answers an open task of the request. The body is the task's response and must match the task's `response_schema`; a response that does not is a 400 and leaves the task open. A `tool_call_approval` is answered with `{"approved": true}` to let the call go ahead, or with `approved` false to decline it, optionally with a `comment` for the agent.
 //
 // Example:
 //
-//	request := &partiteai.GetRequestTaskRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.CompleteTaskRequest{
+//	    ConversationID: "extid=thread-42",
 //	    RequestID: "request_id",
+//	    TaskID: "task_id",
+//	    Body: map[string]any{
+//	        "key": "value",
+//	    },
 //	}
-//	client.Conversations.GetRequestTask(
+//	client.Conversations.CompleteTask(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) GetRequestTask(
+func (c *Client) CompleteTask(
 	ctx context.Context,
-	request *partiteai.GetRequestTaskRequest,
+	request *partiteai.CompleteTaskRequest,
 	opts ...option.RequestOption,
-) (*partiteai.GetTaskResponse, error) {
-	response, err := c.WithRawResponse.GetRequestTask(
+) (*partiteai.Request, error) {
+	response, err := c.WithRawResponse.CompleteTask(
 		ctx,
 		request,
 		opts...,
@@ -414,23 +324,25 @@ func (c *Client) GetRequestTask(
 	return response.Body, nil
 }
 
-// Adds assets to an existing conversation.
+// Declines an open task, and the request goes on. For a `client_task`, the tool call that started it returns an error to the agent. For a `tool_call_approval`, the call is declined, as if it was answered with `approved` false.
 //
 // Example:
 //
-//	request := &partiteai.AttachAssetsToConversationRequest{
-//	    ConversationID: "conversation_id",
+//	request := &partiteai.CancelTaskRequest{
+//	    ConversationID: "extid=thread-42",
+//	    RequestID: "request_id",
+//	    TaskID: "task_id",
 //	}
-//	client.Conversations.AttachAssetsToConversation(
+//	client.Conversations.CancelTask(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) AttachAssetsToConversation(
+func (c *Client) CancelTask(
 	ctx context.Context,
-	request *partiteai.AttachAssetsToConversationRequest,
+	request *partiteai.CancelTaskRequest,
 	opts ...option.RequestOption,
-) (*partiteai.AttachAssetsToConversationResponse, error) {
-	response, err := c.WithRawResponse.AttachAssetsToConversation(
+) (*partiteai.Request, error) {
+	response, err := c.WithRawResponse.CancelTask(
 		ctx,
 		request,
 		opts...,
@@ -441,23 +353,50 @@ func (c *Client) AttachAssetsToConversation(
 	return response.Body, nil
 }
 
-// Returns the conversation that was created with the given `external_id`.
+// Everything the conversation holds, in the order it entered, including what MCP servers and other activity added.
 //
 // Example:
 //
-//	request := &partiteai.GetConversationByExternalIDRequest{
-//	    ExternalID: "external_id",
+//	request := &partiteai.ListResourcesRequest{
+//	    ConversationID: "extid=thread-42",
 //	}
-//	client.Conversations.GetConversationByExternalID(
+//	client.Conversations.ListResources(
 //	    context.TODO(),
 //	    request,
 //	)
-func (c *Client) GetConversationByExternalID(
+func (c *Client) ListResources(
 	ctx context.Context,
-	request *partiteai.GetConversationByExternalIDRequest,
+	request *partiteai.ListResourcesRequest,
 	opts ...option.RequestOption,
-) (*partiteai.Conversation, error) {
-	response, err := c.WithRawResponse.GetConversationByExternalID(
+) (*partiteai.ResourceList, error) {
+	response, err := c.WithRawResponse.ListResources(
+		ctx,
+		request,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return response.Body, nil
+}
+
+// Each file part becomes a resource of the conversation, which later inputs can refer to by its `reference`.
+//
+// Example:
+//
+//	request := &partiteai.AddResourcesRequest{
+//	    ConversationID: "extid=thread-42",
+//	}
+//	client.Conversations.AddResources(
+//	    context.TODO(),
+//	    request,
+//	)
+func (c *Client) AddResources(
+	ctx context.Context,
+	request *partiteai.AddResourcesRequest,
+	opts ...option.RequestOption,
+) (*partiteai.ResourceList, error) {
+	response, err := c.WithRawResponse.AddResources(
 		ctx,
 		request,
 		opts...,

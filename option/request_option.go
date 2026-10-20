@@ -95,10 +95,16 @@ func WithoutRetries() *core.WithoutRetriesOption {
 	return &core.WithoutRetriesOption{}
 }
 
-// WithBasicAuth sets the 'Authorization: Basic <base64>' request header.
-func WithBasicAuth(keyID, keySecret string) *core.BasicAuthOption {
-	return &core.BasicAuthOption{
-		KeyID:     keyID,
-		KeySecret: keySecret,
+// WithAPIKey sets the 'Authorization: Bearer <apiKey>' request header.
+func WithAPIKey(apiKey string) *core.APIKeyOption {
+	return &core.APIKeyOption{
+		APIKey: apiKey,
+	}
+}
+
+// WithAPIKeyFunc sets a function that returns the 'Authorization: Bearer' token at request time.
+func WithAPIKeyFunc(fn func() (string, error)) *core.APIKeyFuncOption {
+	return &core.APIKeyFuncOption{
+		APIKeyFunc: fn,
 	}
 }
