@@ -65,7 +65,7 @@ func (r *RequestOptions) cloneHeader() http.Header {
 	headers := r.HTTPHeader.Clone()
 	headers.Set("X-Fern-Language", "Go")
 	headers.Set("X-Fern-SDK-Name", "github.com/partite-ai/sdk-go")
-	headers.Set("X-Fern-SDK-Version", "v1.0.0-beta6")
+	headers.Set("X-Fern-SDK-Version", "v1.0.0-beta7")
 	return headers
 }
 

@@ -398,6 +398,44 @@ func (g *GetRequestRequest) SetWait(wait *int) {
 }
 
 var (
+	getResourceContentRequestFieldConversationID = big.NewInt(1 << 0)
+	getResourceContentRequestFieldHandle         = big.NewInt(1 << 1)
+)
+
+type GetResourceContentRequest struct {
+	// A conversation ID, or `extid=` followed by the percent-encoded external ID.
+	ConversationID string `json:"-" url:"-"`
+	// The resource's handle, such as `r1`, as its reference names it.
+	Handle string `json:"-" url:"-"`
+
+	// Private bitmask of fields set to an explicit value and therefore not to be omitted
+	explicitFields *big.Int `json:"-" url:"-"`
+}
+
+func (g *GetResourceContentRequest) require(field *big.Int) {
+	next := new(big.Int)
+	if g.explicitFields != nil {
+		next.Set(g.explicitFields)
+	}
+	next.Or(next, field)
+	g.explicitFields = next
+}
+
+// SetConversationID sets the ConversationID field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetResourceContentRequest) SetConversationID(conversationID string) {
+	g.ConversationID = conversationID
+	g.require(getResourceContentRequestFieldConversationID)
+}
+
+// SetHandle sets the Handle field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (g *GetResourceContentRequest) SetHandle(handle string) {
+	g.Handle = handle
+	g.require(getResourceContentRequestFieldHandle)
+}
+
+var (
 	listIntentsRequestFieldConversationID = big.NewInt(1 << 0)
 )
 
@@ -427,11 +465,17 @@ func (l *ListIntentsRequest) SetConversationID(conversationID string) {
 
 var (
 	listRequestsRequestFieldConversationID = big.NewInt(1 << 0)
+	listRequestsRequestFieldLimit          = big.NewInt(1 << 1)
+	listRequestsRequestFieldAfter          = big.NewInt(1 << 2)
 )
 
 type ListRequestsRequest struct {
 	// A conversation ID, or `extid=` followed by the percent-encoded external ID.
 	ConversationID string `json:"-" url:"-"`
+	// How many requests the page holds.
+	Limit *int `json:"-" url:"limit,omitempty"`
+	// A request ID. The page starts with the request after it.
+	After *string `json:"-" url:"after,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -451,6 +495,20 @@ func (l *ListRequestsRequest) require(field *big.Int) {
 func (l *ListRequestsRequest) SetConversationID(conversationID string) {
 	l.ConversationID = conversationID
 	l.require(listRequestsRequestFieldConversationID)
+}
+
+// SetLimit sets the Limit field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (l *ListRequestsRequest) SetLimit(limit *int) {
+	l.Limit = limit
+	l.require(listRequestsRequestFieldLimit)
+}
+
+// SetAfter sets the After field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (l *ListRequestsRequest) SetAfter(after *string) {
+	l.After = after
+	l.require(listRequestsRequestFieldAfter)
 }
 
 var (
@@ -2507,18 +2565,27 @@ func (r *RequestStreamEvent) validate() error {
 
 var (
 	resourceFieldReference   = big.NewInt(1 << 0)
-	resourceFieldName        = big.NewInt(1 << 1)
-	resourceFieldDescription = big.NewInt(1 << 2)
-	resourceFieldMimeType    = big.NewInt(1 << 3)
+	resourceFieldKind        = big.NewInt(1 << 1)
+	resourceFieldName        = big.NewInt(1 << 2)
+	resourceFieldDescription = big.NewInt(1 << 3)
+	resourceFieldMimeType    = big.NewInt(1 << 4)
+	resourceFieldUserOnly    = big.NewInt(1 << 5)
+	resourceFieldOf          = big.NewInt(1 << 6)
 )
 
 // Something the conversation holds, such as a file.
 type Resource struct {
 	// The value to put in an input wherever it refers to this resource.
-	Reference   Reference `json:"reference" url:"reference"`
-	Name        string    `json:"name" url:"name"`
-	Description string    `json:"description" url:"description"`
-	MimeType    string    `json:"mime_type" url:"mime_type"`
+	Reference Reference `json:"reference" url:"reference"`
+	// What the resource is: `file`, a file a client attached; `tool_media`, an image or audio a tool returned; `embedded`, a server resource that came with its content; `link`, a server resource known only by its URI; `read_result`, what one read of a resource returned. Every kind but `link` has content the content endpoint returns.
+	Kind        ResourceKind `json:"kind" url:"kind"`
+	Name        string       `json:"name" url:"name"`
+	Description string       `json:"description" url:"description"`
+	MimeType    string       `json:"mime_type" url:"mime_type"`
+	// Whether the resource is only for the user. The model never sees it.
+	UserOnly bool `json:"user_only" url:"user_only"`
+	// For a `read_result`, the resource it read.
+	Of *Reference `json:"of,omitempty" url:"of,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -2532,6 +2599,13 @@ func (r *Resource) GetReference() Reference {
 		return nil
 	}
 	return r.Reference
+}
+
+func (r *Resource) GetKind() ResourceKind {
+	if r == nil {
+		return ""
+	}
+	return r.Kind
 }
 
 func (r *Resource) GetName() string {
@@ -2553,6 +2627,20 @@ func (r *Resource) GetMimeType() string {
 		return ""
 	}
 	return r.MimeType
+}
+
+func (r *Resource) GetUserOnly() bool {
+	if r == nil {
+		return false
+	}
+	return r.UserOnly
+}
+
+func (r *Resource) GetOf() *Reference {
+	if r == nil {
+		return nil
+	}
+	return r.Of
 }
 
 func (r *Resource) GetExtraProperties() map[string]interface{} {
@@ -2578,6 +2666,13 @@ func (r *Resource) SetReference(reference Reference) {
 	r.require(resourceFieldReference)
 }
 
+// SetKind sets the Kind field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (r *Resource) SetKind(kind ResourceKind) {
+	r.Kind = kind
+	r.require(resourceFieldKind)
+}
+
 // SetName sets the Name field and marks it as non-optional;
 // this prevents an empty or null value for this field from being omitted during serialization.
 func (r *Resource) SetName(name string) {
@@ -2597,6 +2692,20 @@ func (r *Resource) SetDescription(description string) {
 func (r *Resource) SetMimeType(mimeType string) {
 	r.MimeType = mimeType
 	r.require(resourceFieldMimeType)
+}
+
+// SetUserOnly sets the UserOnly field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (r *Resource) SetUserOnly(userOnly bool) {
+	r.UserOnly = userOnly
+	r.require(resourceFieldUserOnly)
+}
+
+// SetOf sets the Of field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (r *Resource) SetOf(of *Reference) {
+	r.Of = of
+	r.require(resourceFieldOf)
 }
 
 func (r *Resource) UnmarshalJSON(data []byte) error {
@@ -2639,6 +2748,38 @@ func (r *Resource) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", r)
+}
+
+// What the resource is: `file`, a file a client attached; `tool_media`, an image or audio a tool returned; `embedded`, a server resource that came with its content; `link`, a server resource known only by its URI; `read_result`, what one read of a resource returned. Every kind but `link` has content the content endpoint returns.
+type ResourceKind string
+
+const (
+	ResourceKindFile       ResourceKind = "file"
+	ResourceKindToolMedia  ResourceKind = "tool_media"
+	ResourceKindEmbedded   ResourceKind = "embedded"
+	ResourceKindLink       ResourceKind = "link"
+	ResourceKindReadResult ResourceKind = "read_result"
+)
+
+func NewResourceKindFromString(s string) (ResourceKind, error) {
+	switch s {
+	case "file":
+		return ResourceKindFile, nil
+	case "tool_media":
+		return ResourceKindToolMedia, nil
+	case "embedded":
+		return ResourceKindEmbedded, nil
+	case "link":
+		return ResourceKindLink, nil
+	case "read_result":
+		return ResourceKindReadResult, nil
+	}
+	var t ResourceKind
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (r ResourceKind) Ptr() *ResourceKind {
+	return &r
 }
 
 var (
@@ -3148,10 +3289,13 @@ func (l *ListIntentsResponse) String() string {
 
 var (
 	listRequestsResponseFieldRequests = big.NewInt(1 << 0)
+	listRequestsResponseFieldNext     = big.NewInt(1 << 1)
 )
 
 type ListRequestsResponse struct {
 	Requests []*Request `json:"requests" url:"requests"`
+	// Send it as `after` to get the next page. It is left out on the last page.
+	Next *string `json:"next,omitempty" url:"next,omitempty"`
 
 	// Private bitmask of fields set to an explicit value and therefore not to be omitted
 	explicitFields *big.Int `json:"-" url:"-"`
@@ -3165,6 +3309,13 @@ func (l *ListRequestsResponse) GetRequests() []*Request {
 		return nil
 	}
 	return l.Requests
+}
+
+func (l *ListRequestsResponse) GetNext() *string {
+	if l == nil {
+		return nil
+	}
+	return l.Next
 }
 
 func (l *ListRequestsResponse) GetExtraProperties() map[string]interface{} {
@@ -3188,6 +3339,13 @@ func (l *ListRequestsResponse) require(field *big.Int) {
 func (l *ListRequestsResponse) SetRequests(requests []*Request) {
 	l.Requests = requests
 	l.require(listRequestsResponseFieldRequests)
+}
+
+// SetNext sets the Next field and marks it as non-optional;
+// this prevents an empty or null value for this field from being omitted during serialization.
+func (l *ListRequestsResponse) SetNext(next *string) {
+	l.Next = next
+	l.require(listRequestsResponseFieldNext)
 }
 
 func (l *ListRequestsResponse) UnmarshalJSON(data []byte) error {

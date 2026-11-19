@@ -3,7 +3,9 @@
 package conversations
 
 import (
+	bytes "bytes"
 	context "context"
+	io "io"
 	http "net/http"
 
 	partiteai "github.com/partite-ai/sdk-go"
@@ -201,6 +203,13 @@ func (r *RawClient) ListRequests(
 		baseURL+"/conversations/%v/requests",
 		request.ConversationID,
 	)
+	queryParams, err := internal.QueryValues(request)
+	if err != nil {
+		return nil, err
+	}
+	if len(queryParams) > 0 {
+		endpointURL += "?" + queryParams.Encode()
+	}
 	headers := internal.MergeHeaders(
 		r.options.ToHeader(),
 		options.ToHeader(),
@@ -589,6 +598,52 @@ func (r *RawClient) AddResources(
 		return nil, err
 	}
 	return &core.Response[*partiteai.ResourceList]{
+		StatusCode: raw.StatusCode,
+		Header:     raw.Header,
+		Body:       response,
+	}, nil
+}
+
+func (r *RawClient) GetResourceContent(
+	ctx context.Context,
+	request *partiteai.GetResourceContentRequest,
+	opts ...option.RequestOption,
+) (*core.Response[io.Reader], error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		r.baseURL,
+		"https://api.partite.ai",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/conversations/%v/resources/%v/content",
+		request.ConversationID,
+		request.Handle,
+	)
+	headers := internal.MergeHeaders(
+		r.options.ToHeader(),
+		options.ToHeader(),
+	)
+	response := bytes.NewBuffer(nil)
+	raw, err := r.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			DisableRetries:  options.DisableRetries,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Response:        response,
+			ErrorDecoder:    internal.NewErrorDecoder(partiteai.ErrorCodes),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &core.Response[io.Reader]{
 		StatusCode: raw.StatusCode,
 		Header:     raw.Header,
 		Body:       response,

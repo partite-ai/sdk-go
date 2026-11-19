@@ -178,7 +178,7 @@ client.Conversations.ListIntents(
 <dl>
 <dd>
 
-Every request of the conversation, oldest first.
+A page of the conversation's requests, oldest first. A `waiting` request shows at most five of its open tasks.
 </dd>
 </dl>
 </dd>
@@ -215,6 +215,22 @@ client.Conversations.ListRequests(
 <dd>
 
 **conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `*int` — How many requests the page holds.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**after:** `*string` — A request ID. The page starts with the request after it.
     
 </dd>
 </dl>
@@ -798,6 +814,75 @@ client.Conversations.AddResources(
 <dd>
 
 **conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.Conversations.GetResourceContent(ConversationID, Handle) -> string</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns the content of a resource whose content mesh holds: a file a client attached, an image or audio a tool returned, a document a server sent with its content, or what a read returned. Resources only for the user are included. A link is refused, since only its server has the content, and the API never asks a server for it. The content is always sent as a download, never to be shown in a browser.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```go
+request := &partiteai.GetResourceContentRequest{
+    ConversationID: "conversation_id",
+    Handle: "handle",
+}
+client.Conversations.GetResourceContent(
+    context.TODO(),
+    request,
+)
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**conversationID:** `string` — A conversation ID, or `extid=` followed by the percent-encoded external ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**handle:** `string` — The resource's handle, such as `r1`, as its reference names it.
     
 </dd>
 </dl>

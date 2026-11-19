@@ -4,6 +4,7 @@ package conversations
 
 import (
 	context "context"
+	io "io"
 	http "net/http"
 	os "os"
 
@@ -118,7 +119,7 @@ func (c *Client) ListIntents(
 	return response.Body, nil
 }
 
-// Every request of the conversation, oldest first.
+// A page of the conversation's requests, oldest first. A `waiting` request shows at most five of its open tasks.
 //
 // Example:
 //
@@ -397,6 +398,34 @@ func (c *Client) AddResources(
 	opts ...option.RequestOption,
 ) (*partiteai.ResourceList, error) {
 	response, err := c.WithRawResponse.AddResources(
+		ctx,
+		request,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return response.Body, nil
+}
+
+// Returns the content of a resource whose content mesh holds: a file a client attached, an image or audio a tool returned, a document a server sent with its content, or what a read returned. Resources only for the user are included. A link is refused, since only its server has the content, and the API never asks a server for it. The content is always sent as a download, never to be shown in a browser.
+//
+// Example:
+//
+//	request := &partiteai.GetResourceContentRequest{
+//	    ConversationID: "conversation_id",
+//	    Handle: "handle",
+//	}
+//	client.Conversations.GetResourceContent(
+//	    context.TODO(),
+//	    request,
+//	)
+func (c *Client) GetResourceContent(
+	ctx context.Context,
+	request *partiteai.GetResourceContentRequest,
+	opts ...option.RequestOption,
+) (io.Reader, error) {
+	response, err := c.WithRawResponse.GetResourceContent(
 		ctx,
 		request,
 		opts...,
